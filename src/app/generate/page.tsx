@@ -38,17 +38,21 @@ export default function GeneratePage() {
     setIsGenerating(true);
     setError(null);
 
+    console.log("Starting generation with style:", selectedStyle);
+
     try {
+      // Definitive POST to /api/generate
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image,
+          image: image, // Base64 data from FileReader
           style: selectedStyle,
         }),
       });
 
       const data = await response.json();
+      console.log("Fal.ai Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Generation failed");
@@ -67,7 +71,7 @@ export default function GeneratePage() {
       };
       localStorage.setItem("lakuai-library", JSON.stringify([newProject, ...library]));
     } catch (err: any) {
-      console.error(err);
+      console.error("Fetch Error:", err);
       setError(err.message || "Something went wrong. Please check your API key.");
     } finally {
       setIsGenerating(false);
