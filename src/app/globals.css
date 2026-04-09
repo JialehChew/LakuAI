@@ -16,6 +16,27 @@ body {
   font-family: var(--font-sans);
 }
 
+@layer components {
+  .glow-card {
+    @apply bg-white rounded-2xl border border-gray-100 shadow-sm transition-all duration-300;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .glow-card:hover {
+    @apply border-indigo-200;
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.08), 0 0 0 1px rgba(79, 70, 229, 0.1);
+  }
+
+  .glow-card-indigo {
+    @apply rounded-2xl transition-all duration-300 relative overflow-hidden;
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.15);
+  }
+
+  .glow-card-indigo:hover {
+    box-shadow: 0 0 30px rgba(79, 70, 229, 0.25);
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

@@ -3,8 +3,10 @@ export type Language = 'en' | 'ms' | 'zh';
 export const translations = {
   en: {
     common: {
+      overview: 'Overview',
       generate: 'Generate',
       library: 'Library',
+      credits: 'Credits',
       settings: 'Settings',
       back: 'Back',
       download: 'Download',
@@ -14,6 +16,19 @@ export const translations = {
       loading: 'Processing...',
       start: 'Get Started',
       howItWorks: 'How it Works',
+      malaysianBadge: 'Proudly Malaysian 🇲🇾',
+      shopeeTips: 'Shopee Tips',
+      tiktokGuide: 'TikTok Guide',
+    },
+    overview: {
+      welcome: 'Hello, Digital Artisan!',
+      subtitle: 'Ready to transform your product photography today?',
+      quickActions: 'Quick Actions',
+      startGenerating: 'Start Generating',
+      viewGallery: 'View Gallery',
+      browseStyles: 'Browse Styles',
+      recentProjects: 'Recent Projects',
+      noRecent: 'No recent projects to show.',
     },
     landing: {
       heroTitle: 'Professional AI Product Photography',
@@ -48,12 +63,22 @@ export const translations = {
       emptyTitle: 'No projects yet',
       emptyDesc: 'Create your first professional product photo now!',
       createFirst: 'Create your first project',
+    },
+    credits: {
+      title: 'Credits & Pricing',
+      balance: 'Credits Remaining',
+      upgradeTitle: 'Upgrade Your Plan',
+      starter: 'Starter',
+      pro: 'Pro',
+      enterprise: 'Enterprise',
     }
   },
   ms: {
     common: {
+      overview: 'Ringkasan',
       generate: 'Bina',
       library: 'Perpustakaan',
+      credits: 'Kredit',
       settings: 'Tetapan',
       back: 'Kembali',
       download: 'Muat Turun',
@@ -63,6 +88,19 @@ export const translations = {
       loading: 'Memproses...',
       start: 'Mulakan Sekarang',
       howItWorks: 'Cara Ia Berfungsi',
+      malaysianBadge: 'Kebanggaan Malaysia 🇲🇾',
+      shopeeTips: 'Tip Shopee',
+      tiktokGuide: 'Panduan TikTok',
+    },
+    overview: {
+      welcome: 'Helo, Artisan Digital!',
+      subtitle: 'Sedia untuk mengubah fotografi produk anda hari ini?',
+      quickActions: 'Tindakan Pantas',
+      startGenerating: 'Mula Membina',
+      viewGallery: 'Lihat Galeri',
+      browseStyles: 'Lihat Gaya',
+      recentProjects: 'Projek Terkini',
+      noRecent: 'Tiada projek terkini untuk dipaparkan.',
     },
     landing: {
       heroTitle: 'Fotografi Produk AI Profesional',
@@ -97,12 +135,22 @@ export const translations = {
       emptyTitle: 'Tiada projek lagi',
       emptyDesc: 'Bina foto produk profesional pertama anda sekarang!',
       createFirst: 'Bina projek pertama anda',
+    },
+    credits: {
+      title: 'Kredit & Harga',
+      balance: 'Baki Kredit',
+      upgradeTitle: 'Naik Taraf Pelan Anda',
+      starter: 'Permulaan',
+      pro: 'Pro',
+      enterprise: 'Enterpris',
     }
   },
   zh: {
     common: {
+      overview: '概览',
       generate: '生成',
       library: '素材库',
+      credits: '额度',
       settings: '设置',
       back: '返回',
       download: '下载',
@@ -112,6 +160,19 @@ export const translations = {
       loading: '处理中...',
       start: '立即开始',
       howItWorks: '操作流程',
+      malaysianBadge: '马来西亚荣誉出品 🇲🇾',
+      shopeeTips: 'Shopee 技巧',
+      tiktokGuide: 'TikTok 指南',
+    },
+    overview: {
+      welcome: '你好，数字工匠！',
+      subtitle: '今天准备好改造您的产品摄影了吗？',
+      quickActions: '快速操作',
+      startGenerating: '开始生成',
+      viewGallery: '查看画廊',
+      browseStyles: '浏览风格',
+      recentProjects: '最近项目',
+      noRecent: '暂无最近项目。',
     },
     landing: {
       heroTitle: '专业 AI 产品摄影',
@@ -146,6 +207,14 @@ export const translations = {
       emptyTitle: '暂无项目',
       emptyDesc: '现在就开始创作您的第一张专业产品照片吧！',
       createFirst: '开始您的第一个项目',
+    },
+    credits: {
+      title: '额度与价格',
+      balance: '剩余额度',
+      upgradeTitle: '升级您的计划',
+      starter: '入门版',
+      pro: '专业版',
+      enterprise: '企业版',
     }
   }
 };
