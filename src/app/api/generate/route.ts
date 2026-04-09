@@ -24,18 +24,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    console.log(`Requesting generation with style: ${style}`);
+    console.log(`Requesting generation with style: ${style} using flux-kontext-pro`);
 
-    // Using native fetch to call Fal.ai Flux Pro
-    const response = await fetch("https://fal.run/fal-ai/flux-pro", {
+    // Using flux-kontext-pro for better structure preservation
+    const response = await fetch("https://fal.run/fal-ai/flux-kontext-pro", {
       method: "POST",
       headers: {
         "Authorization": `Key ${falKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: `Professional product photography: The product from the image placed in a ${promptDetails}. High-end commercial grade, 8k resolution, sharp focus, vibrant colors.`,
+        prompt: `Professional product photography: The product from the image placed in a ${promptDetails}. High-end commercial grade, 8k resolution, sharp focus, vibrant colors, maintain original product shape and details.`,
         image_url: image,
+        // Optional: Add parameters to increase fidelity if supported by the specific model version
+        // structure_preservation: 1.0,
       }),
     });
 
