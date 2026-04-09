@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { StyleGrid } from "@/components/generate/StyleGrid";
 import { MockGenAnimation } from "@/components/generate/MockGenAnimation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Upload, X, Wand2, Download, Save, Edit2 } from "lucide-react";
+import { Upload, X, Wand2, Download, Save, Edit2, AlertCircle } from "lucide-react";
 import { saveAs } from "file-saver";
 
 export default function GeneratePage() {
@@ -16,35 +16,62 @@ export default function GeneratePage() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Untilted Project");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (max 4MB for demo)
+      if (file.size > 4 * 1024 * 1024) {
+        setError("Image too large. Please upload an image under 4MB.");
+        return;
+      }
+      setError(null);
       const reader = new FileReader();
       reader.onload = (e) => setImage(e.target?.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!image) return;
     setIsGenerating(true);
-    // Mock generation delay
-    setTimeout(() => {
-      setIsGenerating(false);
-      setGeneratedImage(image); // In real app, this would be the AI result
+    setError(null);
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image,
+          style: selectedStyle,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Generation failed");
+      }
+
+      setGeneratedImage(data.image);
 
       // Save to library (localStorage)
       const library = JSON.parse(localStorage.getItem("lakuai-library") || "[]");
       const newProject = {
         id: Date.now(),
         name: projectName,
-        image: image,
+        image: data.image,
         style: selectedStyle,
         date: new Date().toISOString(),
       };
       localStorage.setItem("lakuai-library", JSON.stringify([newProject, ...library]));
-    }, 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Something went wrong. Please check your API key.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDownload = () => {
@@ -83,16 +110,20 @@ export default function GeneratePage() {
         {/* Workspace */}
         <div className="space-y-6">
           <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 aspect-square relative overflow-hidden flex flex-col items-center justify-center p-8 group shadow-sm transition-all hover:border-indigo-300">
-            {image ? (
+            {generatedImage ? (
+              <img src={generatedImage} className="w-full h-full object-contain" alt="Generated result" />
+            ) : image ? (
               <>
                 <img src={image} className="w-full h-full object-contain" alt="Upload preview" />
                 {isGenerating && <MockGenAnimation />}
-                <button
-                  onClick={() => {setImage(null); setGeneratedImage(null);}}
-                  className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-lg hover:text-red-600 transition-colors z-30"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                {!isGenerating && (
+                  <button
+                    onClick={() => {setImage(null); setGeneratedImage(null);}}
+                    className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-lg hover:text-red-600 transition-colors z-30"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
               </>
             ) : (
               <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
@@ -105,6 +136,13 @@ export default function GeneratePage() {
               </label>
             )}
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center gap-3 text-red-600 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              {error}
+            </div>
+          )}
 
           <div className="flex gap-4">
             <button
@@ -119,12 +157,19 @@ export default function GeneratePage() {
               )}
             </button>
 
-            {generatedImage && (
+            {(generatedImage || (image && !isGenerating)) && (
               <button
-                onClick={handleDownload}
+                onClick={() => {
+                  if (generatedImage) {
+                    handleDownload();
+                  } else {
+                    setImage(null);
+                    setGeneratedImage(null);
+                  }
+                }}
                 className="bg-white border-2 border-indigo-100 text-indigo-700 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all shadow-sm active:scale-[0.98]"
               >
-                <Download className="w-5 h-5" />
+                {generatedImage ? <Download className="w-5 h-5" /> : <X className="w-5 h-5" />}
               </button>
             )}
           </div>
