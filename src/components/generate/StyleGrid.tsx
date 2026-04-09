@@ -26,14 +26,16 @@ export const StyleGrid = ({ selectedStyle, onSelect }: StyleGridProps) => {
           key={style.id}
           onClick={() => onSelect(style.id)}
           className={cn(
-            "group relative aspect-square rounded-2xl overflow-hidden border-4 transition-all",
-            selectedStyle === style.id ? "border-violet-600 scale-[1.02] shadow-xl shadow-violet-100" : "border-transparent hover:border-violet-200"
+            "group relative aspect-square rounded-2xl overflow-hidden border-4 transition-all duration-300",
+            selectedStyle === style.id
+              ? "border-indigo-600 scale-[1.02] shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+              : "border-transparent hover:border-indigo-200"
           )}
         >
-          <img src={style.image} alt={style.id} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          <img src={style.image} alt={style.id} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
           <div className="absolute bottom-3 left-3 right-3 text-left">
-            <span className="text-white text-xs font-bold font-lexend">
+            <span className="text-white text-[10px] font-bold font-lexend uppercase tracking-wider">
               {t.generate.styles[style.id as keyof typeof t.generate.styles]}
             </span>
           </div>

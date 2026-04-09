@@ -63,12 +63,12 @@ export default function GeneratePage() {
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                className="text-2xl font-bold font-lexend bg-white border-b-2 border-violet-600 focus:outline-none px-1"
+                className="text-2xl font-bold font-lexend bg-transparent border-b-2 border-indigo-600 focus:outline-none px-1"
                 autoFocus
                 onBlur={() => setIsEditingName(false)}
                 onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
               />
-              <button onClick={() => setIsEditingName(false)} className="text-violet-600"><Save className="w-5 h-5" /></button>
+              <button onClick={() => setIsEditingName(false)} className="text-indigo-600"><Save className="w-5 h-5" /></button>
             </div>
           ) : (
             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingName(true)}>
@@ -82,7 +82,7 @@ export default function GeneratePage() {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Workspace */}
         <div className="space-y-6">
-          <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 aspect-square relative overflow-hidden flex flex-col items-center justify-center p-8 group">
+          <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 aspect-square relative overflow-hidden flex flex-col items-center justify-center p-8 group shadow-sm transition-all hover:border-indigo-300">
             {image ? (
               <>
                 <img src={image} className="w-full h-full object-contain" alt="Upload preview" />
@@ -96,7 +96,7 @@ export default function GeneratePage() {
               </>
             ) : (
               <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                <div className="w-20 h-20 bg-violet-50 text-violet-600 rounded-3xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Upload className="w-8 h-8" />
                 </div>
                 <h3 className="text-lg font-bold font-lexend mb-1">{t.generate.uploadTitle}</h3>
@@ -110,7 +110,7 @@ export default function GeneratePage() {
             <button
               onClick={handleGenerate}
               disabled={!image || isGenerating}
-              className="flex-1 bg-violet-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-violet-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-violet-200 transition-all"
+              className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-indigo-200 transition-all active:scale-[0.98]"
             >
               {isGenerating ? (
                 <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t.common.loading}</>
@@ -122,7 +122,7 @@ export default function GeneratePage() {
             {generatedImage && (
               <button
                 onClick={handleDownload}
-                className="bg-white border-2 border-violet-100 text-violet-700 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-violet-50 transition-all"
+                className="bg-white border-2 border-indigo-100 text-indigo-700 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all shadow-sm active:scale-[0.98]"
               >
                 <Download className="w-5 h-5" />
               </button>
@@ -134,15 +134,15 @@ export default function GeneratePage() {
         <div className="space-y-8">
           <div>
             <h2 className="text-xl font-bold font-lexend mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-violet-100 text-violet-700 rounded-lg flex items-center justify-center text-sm">1</span>
+              <span className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm">1</span>
               {t.generate.selectStyle}
             </h2>
             <StyleGrid selectedStyle={selectedStyle} onSelect={setSelectedStyle} />
           </div>
 
-          <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-3xl p-8 text-white">
+          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white shadow-lg shadow-indigo-100">
             <h3 className="text-xl font-bold font-lexend mb-2">Pro Tip 💡</h3>
-            <p className="text-violet-100 text-sm leading-relaxed">
+            <p className="text-indigo-100 text-sm leading-relaxed">
               For best results, use a product photo with good lighting and a clear background. Our AI works best when the product is the main focus!
             </p>
           </div>
