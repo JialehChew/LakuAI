@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 
 // Map UI styles to professional prompts
 const STYLE_PROMPTS: Record<string, string> = {
-  minimalist: "minimalist studio setting, clean white background, soft natural lighting, high-end product photography, 8k resolution, elegant, simple",
-  studio: "professional studio lighting, softbox lights, clean grey background, sharp focus, cinematic lighting, commercial product photography, 8k resolution",
-  tropical: "outdoor tropical setting, lush green palm leaves in background, bright sunny day, natural lighting, exotic beach vibe, high-end product photography",
-  festive: "festive atmosphere, Raya or Chinese New Year themed decorations, warm fairy lights, cultural ornaments, celebration vibe, professional lighting",
-  cozy: "cozy home interior, warm ambient lighting, wooden table surface, soft blurred living room background, comfortable domestic setting, lifestyle photography",
+  minimalist: "minimalist high-end product photography, set on a plain stone slab, clean background, soft natural lighting, zen vibe, commercial quality, 8k",
+  studio: "professional commercial studio photography, softbox lighting, clean grey seamless backdrop, sharp focus, cinematic depth of field, 8k resolution",
+  tropical: "lush tropical garden setting, vibrant exotic plants in background, bright dappled sunlight, natural resort aesthetic, high-end lifestyle product photography",
+  festive: "luxurious festive holiday theme, warm bokeh fairy lights, gold and red ornaments, elegant celebratory atmosphere, professional product lighting",
+  cozy: "warm cozy home interior, set on a rustic wooden table, soft morning light through a window, blurred domestic background, comfortable lifestyle photography",
 };
 
 export async function POST(request: Request) {
@@ -17,14 +17,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
     }
 
-    const prompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.minimalist;
+    const promptDetails = STYLE_PROMPTS[style] || STYLE_PROMPTS.minimalist;
     const falKey = process.env.FAL_KEY;
 
     if (!falKey) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    // Using native fetch to avoid potential issues with serverless-client in this environment
+    console.log(`Requesting generation with style: ${style}`);
+
+    // Using native fetch to call Fal.ai Flux Pro
     const response = await fetch("https://fal.run/fal-ai/flux-pro", {
       method: "POST",
       headers: {
@@ -32,20 +34,22 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: `A professional product photo of the item in the image, set in a ${prompt}. High quality, 8k resolution, commercial grade photography.`,
+        prompt: `Professional product photography: The product from the image placed in a ${promptDetails}. High-end commercial grade, 8k resolution, sharp focus, vibrant colors.`,
         image_url: image,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('Fal API Error Response:', errorData);
       throw new Error(errorData.detail || 'Fal AI Request failed');
     }
 
     const result = await response.json();
+    console.log('Fal API Success:', result);
     return NextResponse.json({ image: result.images[0].url });
   } catch (error: any) {
-    console.error('Fal AI Error:', error);
+    console.error('Fal AI Route Error:', error);
     return NextResponse.json({ error: error.message || 'AI Generation failed' }, { status: 500 });
   }
 }
