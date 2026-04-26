@@ -7,8 +7,26 @@ export interface ProductIdentity {
   primaryColor?: string;
   sellingPoint?: string;
   structuralRisks?: any[];
-  brandMood?: string; // New: Brand consistency
-  lightingFeel?: string; // New: Brand consistency
+  brandMood?: string;
+  lightingFeel?: string;
+}
+
+export interface BrandIdentity {
+  id: string;
+  name: string;
+  preferredStyle: string;
+  targetAudience: string;
+  defaultPlatform: string;
+  moodDirection: string;
+  commercialTone: 'premium' | 'friendly' | 'energetic' | 'minimalist';
+  localizationPreference: 'urban' | 'tropical' | 'traditional';
+}
+
+export interface CampaignContext {
+  id: string;
+  type: 'raya' | 'cny' | 'merdeka' | 'sale_11_11' | 'sale_12_12' | 'seasonal' | 'none';
+  promoEnergy: 'high' | 'medium' | 'low';
+  colorFocus?: string[];
 }
 
 export interface VisualStrategyObject {
@@ -31,5 +49,7 @@ export interface EngineInput {
   product?: string;
   sellingPoint?: string;
   scenario?: string;
-  narrativeGoal?: string; // New: Workflow orchestration
+  narrativeGoal?: string;
+  brand?: BrandIdentity; // New: Brand memory
+  campaign?: CampaignContext; // New: Campaign engine
 }

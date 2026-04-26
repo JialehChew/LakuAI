@@ -2,6 +2,8 @@ import { EngineInput, VisualStrategyObject, ProductIdentity } from './types';
 import { analyzeProduct } from './layers/product-analyzer';
 import { applyPlatformRules } from './layers/platform-logic';
 import { applyCompositionRules } from './layers/composition-logic';
+import { applyBrandMemory } from './identity/brand-memory';
+import { applyCampaignRules } from './layers/campaign-logic';
 import { buildAdvertisingBrief } from './renderer/brief-builder';
 
 export function generateVisualPrompt(input: EngineInput): { prompt: string; vso: VisualStrategyObject; identity: ProductIdentity } {
@@ -23,7 +25,9 @@ export function generateVisualPrompt(input: EngineInput): { prompt: string; vso:
   };
 
   // 3. Layer Refinement
+  vso = applyBrandMemory(vso, input.brand); // Lock Brand preferences
   vso = applyPlatformRules(vso, input.platform);
+  vso = applyCampaignRules(vso, input.campaign); // Inject Campaign context
   vso = applyCompositionRules(vso, input.platform, input.imageType);
 
   // 4. Render to Brief
