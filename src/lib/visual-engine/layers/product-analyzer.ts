@@ -1,13 +1,16 @@
 import { ProductCategory, ProductIdentity, EngineInput } from '../types';
+import { RISK_PROFILES } from '../constants/risk-profiles';
 
 export function analyzeProduct(input: EngineInput): ProductIdentity {
   const name = input.product || 'product';
   const category = detectCategory(name);
+  const riskProfile = RISK_PROFILES[category];
 
   return {
     name,
     category,
-    sellingPoint: input.sellingPoint
+    sellingPoint: input.sellingPoint,
+    // Future: Ingest riskProfile into identity to influence prompt strictness
   };
 }
 

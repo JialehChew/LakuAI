@@ -1,0 +1,18 @@
+{
+  "identity_drift": {
+    "logo_mutation": "The logo text or icon was hallucinated, simplified, or altered.",
+    "packaging_drift": "The shape, color, or texture of the product packaging changed significantly.",
+    "color_inaccuracy": "The product's primary colors were not preserved.",
+    "shape_distortion": "The geometric proportions of the product were warped."
+  },
+  "visual_artifacts": {
+    "hallucinated_objects": "The AI added extra, unrequested props that distract from the main subject.",
+    "merging_errors": "The product appears to blend or 'melt' into the background.",
+    "distorted_text": "Random text or gibberish appeared in the background or on props."
+  },
+  "commercial_failures": {
+    "cluttered_background": "The background is too busy for Shopee/mobile readability.",
+    "unnatural_lighting": "Lighting feels artificial or doesn't match the environment.",
+    "poor_framing": "The product is too small or improperly cropped."
+  }
+}
