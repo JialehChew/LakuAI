@@ -27,7 +27,7 @@ export function generateVisualPrompt(input: EngineInput): { prompt: string; vso:
   vso = applyCompositionRules(vso, input.platform, input.imageType);
 
   // 4. Render to Brief
-  const prompt = buildAdvertisingBrief(vso, identity);
+  const prompt = buildAdvertisingBrief(vso, identity, input);
 
   return { prompt, vso, identity };
 }
