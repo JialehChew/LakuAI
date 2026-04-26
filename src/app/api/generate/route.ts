@@ -21,7 +21,7 @@ const TYPE_PROMPTS: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
-    const { image, platform, imageType } = await request.json();
+    const { image, platform, imageType, product, sellingPoint, scenario } = await request.json();
 
     if (!image) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
@@ -29,27 +29,29 @@ export async function POST(request: Request) {
 
     const platformPrompt = PLATFORM_PROMPTS[platform] || PLATFORM_PROMPTS.general;
     const typePrompt = TYPE_PROMPTS[imageType] || TYPE_PROMPTS.main;
+
+    // Construct layered prompt
+    const instructionLayer = `STRICTLY PRESERVE the product's ${sellingPoint || 'original appearance'}. Do not simplify or change the colors of the ${product || 'item'}.`;
+    const briefLayer = `The product is ${product || 'a high-quality item'}. Its core features are ${sellingPoint || 'premium quality'}.`;
+    const environmentLayer = `Set the stage for this ${product || 'item'} as ${scenario || typePrompt} within a ${platformPrompt}.`;
+    const qualityLayer = "High-end commercial photography, 8k, sharp focus on product, professional lighting.";
+
+    const finalPrompt = `${instructionLayer} ${briefLayer} ${environmentLayer} ${qualityLayer}`;
+
     const falKey = process.env.FAL_KEY;
 
     if (!falKey) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    const finalPrompt = `A professional product photo: The product from the image in a ${platformPrompt}, ${typePrompt}. High-end commercial grade, 8k resolution, maintain original product details.`;
-
-    // Simplified payload based on latest log feedback
     const payload = {
       prompt: finalPrompt,
-      // Simplified array of strings
       image_urls: [image],
       image_size: "square_hd",
       quality: "low",
     };
 
-    console.log('Sending Payload to Fal.ai (simplified):', JSON.stringify({
-      ...payload,
-      image_urls: ["DATA_URL_REDACTED"]
-    }));
+    console.log('Requesting generation with platform:', platform, 'type:', imageType, 'product:', product);
 
     // Using openai/gpt-image-2/edit
     const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
@@ -68,12 +70,10 @@ export async function POST(request: Request) {
     }
 
     const result = await response.json();
-    console.log('Fal API Success Result:', JSON.stringify(result));
-
     const imageUrl = result.image?.url || result.images?.[0]?.url;
 
     if (!imageUrl) {
-      throw new Error(`No image URL in result: ${JSON.stringify(result)}`);
+      throw new Error("No image URL returned from API");
     }
 
     return NextResponse.json({ image: imageUrl });
