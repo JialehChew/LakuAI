@@ -6,7 +6,7 @@ import { PlatformSelector } from "@/components/generate/PlatformSelector";
 import { ImageTypeSelector } from "@/components/generate/ImageTypeSelector";
 import { MockGenAnimation } from "@/components/generate/MockGenAnimation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Upload, X, Wand2, Download, Save, Edit2, AlertCircle } from "lucide-react";
+import { Upload, X, Wand2, Download, Save, Edit2, AlertCircle, FileText } from "lucide-react";
 import { saveAs } from "file-saver";
 
 export default function GeneratePage() {
@@ -14,6 +14,10 @@ export default function GeneratePage() {
   const [image, setImage] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState("shopee");
   const [selectedImageType, setSelectedImageType] = useState("main");
+  const [productNameInput, setProductNameInput] = useState("");
+  const [sellingPoint, setSellingPoint] = useState("");
+  const [scenario, setScenario] = useState("");
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Untilted Project");
@@ -39,8 +43,6 @@ export default function GeneratePage() {
     setIsGenerating(true);
     setError(null);
 
-    console.log("Starting generation:", { platform: selectedPlatform, type: selectedImageType });
-
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -49,11 +51,13 @@ export default function GeneratePage() {
           image,
           platform: selectedPlatform,
           imageType: selectedImageType,
+          product: productNameInput,
+          sellingPoint,
+          scenario,
         }),
       });
 
       const data = await response.json();
-      console.log("Fal.ai Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Generation failed");
@@ -68,6 +72,7 @@ export default function GeneratePage() {
         image: data.image,
         platform: selectedPlatform,
         imageType: selectedImageType,
+        product: productNameInput,
         date: new Date().toISOString(),
       };
       localStorage.setItem("lakuai-library", JSON.stringify([newProject, ...library]));
@@ -182,6 +187,46 @@ export default function GeneratePage() {
 
         {/* Options */}
         <div className="space-y-8">
+          {/* User Brief Priority Section */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
+             <h2 className="text-lg font-bold font-lexend flex items-center gap-2">
+               <FileText className="w-5 h-5 text-indigo-600" />
+               User Brief
+             </h2>
+             <div className="space-y-3">
+               <div>
+                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">{t.generate.productLabel}</label>
+                 <input
+                   type="text"
+                   value={productNameInput}
+                   onChange={(e) => setProductNameInput(e.target.value)}
+                   placeholder={t.generate.productPlaceholder}
+                   className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                 />
+               </div>
+               <div>
+                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">{t.generate.sellingPointLabel}</label>
+                 <input
+                   type="text"
+                   value={sellingPoint}
+                   onChange={(e) => setSellingPoint(e.target.value)}
+                   placeholder={t.generate.sellingPointPlaceholder}
+                   className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                 />
+               </div>
+               <div>
+                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">{t.generate.scenarioLabel}</label>
+                 <input
+                   type="text"
+                   value={scenario}
+                   onChange={(e) => setScenario(e.target.value)}
+                   placeholder={t.generate.scenarioPlaceholder}
+                   className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                 />
+               </div>
+             </div>
+          </div>
+
           <div>
             <h2 className="text-xl font-bold font-lexend mb-4 flex items-center gap-2">
               <span className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm">1</span>
@@ -196,13 +241,6 @@ export default function GeneratePage() {
               {t.generate.selectImageType}
             </h2>
             <ImageTypeSelector selectedType={selectedImageType} onSelect={setSelectedImageType} />
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white shadow-lg shadow-indigo-100">
-            <h3 className="text-xl font-bold font-lexend mb-2">Pro Tip 💡</h3>
-            <p className="text-indigo-100 text-sm leading-relaxed">
-              Selection of Platform and Image Type helps our AI optimize the background and lighting for better conversion.
-            </p>
           </div>
         </div>
       </div>
