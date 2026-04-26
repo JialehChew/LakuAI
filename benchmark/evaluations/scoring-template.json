@@ -1,0 +1,55 @@
+{
+  "test_id": "",
+  "timestamp": "",
+  "engine": "visual-engine",
+  "platform": "shopee",
+  "image_type": "main",
+  "scores": {
+    "product_preservation": {
+      "weight": 0.40,
+      "score": 0,
+      "notes": {
+        "logo_consistency": null,
+        "packaging_preservation": null,
+        "shape_accuracy": null,
+        "color_consistency": null
+      }
+    },
+    "commercial_quality": {
+      "weight": 0.25,
+      "score": 0,
+      "notes": {
+        "mobile_readability": null,
+        "conversion_clarity": null,
+        "realistic_feel": null
+      }
+    },
+    "localization_quality": {
+      "weight": 0.15,
+      "score": 0,
+      "notes": {
+        "sea_realism": null,
+        "malaysian_authenticity": null
+      }
+    },
+    "composition_quality": {
+      "weight": 0.10,
+      "score": 0,
+      "notes": {
+        "framing": null,
+        "negative_space": null,
+        "balance": null
+      }
+    },
+    "artifact_reduction": {
+      "weight": 0.10,
+      "score": 0,
+      "notes": {
+        "hallucination_check": null,
+        "text_distortion": null
+      }
+    }
+  },
+  "total_weighted_score": 0,
+  "final_verdict": "pass/fail/needs-iteration"
+}

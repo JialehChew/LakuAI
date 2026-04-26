@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateVisualPrompt } from '@/lib/visual-engine';
+import { logGeneration } from '@/lib/visual-engine/utils/logger';
 
-// LEGACY Map Platforms
 const PLATFORM_PROMPTS: Record<string, string> = {
   shopee: "vibrant commercial Shopee marketplace style, bright and clean, high saturation, professional seller photography",
   lazada: "professional Lazada premium mall aesthetic, balanced lighting, high-end marketplace quality",
@@ -10,7 +10,6 @@ const PLATFORM_PROMPTS: Record<string, string> = {
   general: "clean professional e-commerce product photography, neutral background, studio lighting",
 };
 
-// LEGACY Map Image Types
 const TYPE_PROMPTS: Record<string, string> = {
   main: "clean studio background, minimalist setting, product centered, focus on item",
   usp: "close-up shot highlighting product texture and details, macro-style photography, bokeh background",
@@ -22,7 +21,7 @@ const TYPE_PROMPTS: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
-    const { image, platform, imageType, product, sellingPoint, scenario } = await request.json();
+    const { image, platform, imageType, product, sellingPoint, scenario, forceEngine } = await request.json();
 
     if (!image) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
@@ -33,27 +32,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    // FEATURE FLAG: Use New Visual Engine for Main Image
-    const USE_VISUAL_ENGINE = process.env.NEXT_PUBLIC_ENABLE_VISUAL_ENGINE === 'true' || imageType === 'main';
+    // Engine Selection Logic (with force override for benchmarking)
+    const engineToUse = forceEngine || (imageType === 'main' ? 'visual-engine' : 'legacy');
 
     let finalPrompt = "";
+    let vsoData = null;
+    let identityData = null;
 
-    if (USE_VISUAL_ENGINE) {
-      console.log('Using New Visual Strategy Engine');
-      finalPrompt = generateVisualPrompt({ platform, imageType, product, sellingPoint, scenario, image });
+    if (engineToUse === 'visual-engine') {
+      const result = generateVisualPrompt({ platform, imageType, product, sellingPoint, scenario, image });
+      finalPrompt = result.prompt;
+      vsoData = result.vso;
+      identityData = result.identity;
     } else {
-      console.log('Using Legacy String Concatenation Engine');
       const platformPrompt = PLATFORM_PROMPTS[platform] || PLATFORM_PROMPTS.general;
       const typePrompt = TYPE_PROMPTS[imageType] || TYPE_PROMPTS.main;
-
       const instructionLayer = `STRICTLY PRESERVE the product's ${sellingPoint || 'appearance'}. Do not simplify or change the colors of the ${product || 'item'}.`;
       const briefLayer = `The product is ${product || 'a high-quality item'}. Its core features are ${sellingPoint || 'premium quality'}.`;
       const environmentLayer = `Set the stage for this ${product || 'item'} as ${scenario || typePrompt} within a ${platformPrompt}.`;
       const qualityLayer = "High-end commercial photography, 8k, sharp focus on product, professional lighting.";
       finalPrompt = `${instructionLayer} ${briefLayer} ${environmentLayer} ${qualityLayer}`;
     }
-
-    console.log('Final Prompt to AI:', finalPrompt);
 
     const payload = {
       prompt: finalPrompt,
@@ -62,7 +61,6 @@ export async function POST(request: Request) {
       quality: "low",
     };
 
-    // Using openai/gpt-image-2/edit
     const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
       method: "POST",
       headers: {
@@ -74,18 +72,37 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Fal API Error Response:', JSON.stringify(errorData));
       throw new Error(errorData.detail || JSON.stringify(errorData) || 'Fal AI Request failed');
     }
 
     const result = await response.json();
-    const imageUrl = result.image?.url || result.images?.[0]?.url;
+    const resultUrl = result.image?.url || result.images?.[0]?.url;
 
-    if (!imageUrl) {
+    if (!resultUrl) {
       throw new Error("No image URL returned from API");
     }
 
-    return NextResponse.json({ image: imageUrl });
+    // LOGGING SYSTEM INTEGRATION
+    logGeneration({
+      timestamp: new Date().toISOString(),
+      input: {
+        productName: product,
+        platform,
+        imageType,
+        rawInputUrl: "DATA_URL_REDACTED"
+      },
+      engine: {
+        name: engineToUse as any,
+        vso: vsoData || undefined,
+        spio: identityData || undefined,
+        finalPrompt
+      },
+      output: {
+        resultUrl
+      }
+    });
+
+    return NextResponse.json({ image: resultUrl });
   } catch (error: any) {
     console.error('Fal AI Route Error:', error);
     return NextResponse.json({ error: error.message || 'AI Generation failed' }, { status: 500 });
