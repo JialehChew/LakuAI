@@ -7,6 +7,8 @@ export interface ProductIdentity {
   primaryColor?: string;
   sellingPoint?: string;
   structuralRisks?: any[];
+  brandMood?: string; // New: Brand consistency
+  lightingFeel?: string; // New: Brand consistency
 }
 
 export interface VisualStrategyObject {
@@ -29,4 +31,5 @@ export interface EngineInput {
   product?: string;
   sellingPoint?: string;
   scenario?: string;
+  narrativeGoal?: string; // New: Workflow orchestration
 }
