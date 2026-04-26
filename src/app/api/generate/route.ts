@@ -24,38 +24,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    console.log(`Requesting generation with style: ${style} using gpt-image-2/edit`);
+    const payload = {
+      prompt: `Place the product from the original image in a ${promptDetails}. Ensure the product is centered and scaled realistically. Do not alter the product's appearance.`,
+      image_url: image,
+      image_size: "1024x1024",
+      quality: "low",
+    };
 
-    // Using openai/gpt-image-2/edit for cost efficiency and NLU
+    console.log('Sending Payload to Fal.ai:', JSON.stringify({ ...payload, image_url: "DATA_URL_REDACTED" }));
+
+    // Using openai/gpt-image-2/edit
     const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
       method: "POST",
       headers: {
         "Authorization": `Key ${falKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        prompt: `Place the product from the original image in a ${promptDetails}. Ensure the product is centered and scaled realistically. Do not alter the product's appearance.`,
-        image_url: image,
-        // Model-specific parameters for cost efficiency
-        quality: "low",
-        size: "1024x1024",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Fal API Error Response:', errorData);
-      throw new Error(errorData.detail || 'Fal AI Request failed');
+      console.error('Fal API Error Response:', JSON.stringify(errorData));
+      throw new Error(JSON.stringify(errorData) || 'Fal AI Request failed');
     }
 
     const result = await response.json();
-    console.log('Fal API Success:', result);
+    console.log('Fal API Success Result:', JSON.stringify(result));
 
-    // Adjust result mapping based on typical Fal.ai response structure for this model
-    const imageUrl = result.images?.[0]?.url || result.image?.url;
+    // GPT Edit model usually returns { "image": { "url": "..." } } or { "images": [{ "url": "..." }] }
+    const imageUrl = result.image?.url || result.images?.[0]?.url;
 
     if (!imageUrl) {
-      throw new Error("No image URL returned from API");
+      throw new Error(`No image URL in result: ${JSON.stringify(result)}`);
     }
 
     return NextResponse.json({ image: imageUrl });
