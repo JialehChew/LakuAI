@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { generateVisualPrompt } from '@/lib/visual-engine';
 
-// Map Platforms to specific aesthetic prefixes
+// LEGACY Map Platforms
 const PLATFORM_PROMPTS: Record<string, string> = {
   shopee: "vibrant commercial Shopee marketplace style, bright and clean, high saturation, professional seller photography",
   lazada: "professional Lazada premium mall aesthetic, balanced lighting, high-end marketplace quality",
@@ -9,7 +10,7 @@ const PLATFORM_PROMPTS: Record<string, string> = {
   general: "clean professional e-commerce product photography, neutral background, studio lighting",
 };
 
-// Map Image Types to specific background and composition details
+// LEGACY Map Image Types
 const TYPE_PROMPTS: Record<string, string> = {
   main: "clean studio background, minimalist setting, product centered, focus on item",
   usp: "close-up shot highlighting product texture and details, macro-style photography, bokeh background",
@@ -27,22 +28,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Image is required' }, { status: 400 });
     }
 
-    const platformPrompt = PLATFORM_PROMPTS[platform] || PLATFORM_PROMPTS.general;
-    const typePrompt = TYPE_PROMPTS[imageType] || TYPE_PROMPTS.main;
-
-    // Construct layered prompt
-    const instructionLayer = `STRICTLY PRESERVE the product's ${sellingPoint || 'original appearance'}. Do not simplify or change the colors of the ${product || 'item'}.`;
-    const briefLayer = `The product is ${product || 'a high-quality item'}. Its core features are ${sellingPoint || 'premium quality'}.`;
-    const environmentLayer = `Set the stage for this ${product || 'item'} as ${scenario || typePrompt} within a ${platformPrompt}.`;
-    const qualityLayer = "High-end commercial photography, 8k, sharp focus on product, professional lighting.";
-
-    const finalPrompt = `${instructionLayer} ${briefLayer} ${environmentLayer} ${qualityLayer}`;
-
     const falKey = process.env.FAL_KEY;
-
     if (!falKey) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
+
+    // FEATURE FLAG: Use New Visual Engine for Main Image
+    const USE_VISUAL_ENGINE = process.env.NEXT_PUBLIC_ENABLE_VISUAL_ENGINE === 'true' || imageType === 'main';
+
+    let finalPrompt = "";
+
+    if (USE_VISUAL_ENGINE) {
+      console.log('Using New Visual Strategy Engine');
+      finalPrompt = generateVisualPrompt({ platform, imageType, product, sellingPoint, scenario, image });
+    } else {
+      console.log('Using Legacy String Concatenation Engine');
+      const platformPrompt = PLATFORM_PROMPTS[platform] || PLATFORM_PROMPTS.general;
+      const typePrompt = TYPE_PROMPTS[imageType] || TYPE_PROMPTS.main;
+
+      const instructionLayer = `STRICTLY PRESERVE the product's ${sellingPoint || 'appearance'}. Do not simplify or change the colors of the ${product || 'item'}.`;
+      const briefLayer = `The product is ${product || 'a high-quality item'}. Its core features are ${sellingPoint || 'premium quality'}.`;
+      const environmentLayer = `Set the stage for this ${product || 'item'} as ${scenario || typePrompt} within a ${platformPrompt}.`;
+      const qualityLayer = "High-end commercial photography, 8k, sharp focus on product, professional lighting.";
+      finalPrompt = `${instructionLayer} ${briefLayer} ${environmentLayer} ${qualityLayer}`;
+    }
+
+    console.log('Final Prompt to AI:', finalPrompt);
 
     const payload = {
       prompt: finalPrompt,
@@ -50,8 +61,6 @@ export async function POST(request: Request) {
       image_size: "square_hd",
       quality: "low",
     };
-
-    console.log('Requesting generation with platform:', platform, 'type:', imageType, 'product:', product);
 
     // Using openai/gpt-image-2/edit
     const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
