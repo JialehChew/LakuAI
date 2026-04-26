@@ -1,0 +1,20 @@
+{
+  "categories": {
+    "jewelry": {
+      "best_lighting": "soft_diffused",
+      "best_composition": "centered",
+      "avg_score": 0
+    },
+    "cosmetics": {
+      "best_lighting": "high_contrast_studio",
+      "best_composition": "macro_detail",
+      "avg_score": 0
+    }
+  },
+  "platforms": {
+    "shopee": {
+      "highest_conversion_behavior": "high_saturation_mobile",
+      "avg_readability_score": 0
+    }
+  }
+}

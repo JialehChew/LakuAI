@@ -34,11 +34,16 @@ export const VOCABULARY = {
       "Simple and elegant presentation with no unnecessary distractions.",
       "The aesthetic is understated and sophisticated, focusing on pure form."
     ]
-  }
+  },
+  realism: [
+    "The product makes realistic contact with the surface, casting a subtle, natural shadow.",
+    "Ensure the item is grounded in the scene with professional shadow-contact details.",
+    "The interaction between the product and its environment looks authentic and physically grounded."
+  ]
 };
 
-export function getRandomPhrase(category: keyof typeof VOCABULARY, key: string): string {
-  const options = (VOCABULARY as any)[category]?.[key];
+export function getRandomPhrase(category: keyof typeof VOCABULARY, key?: string): string {
+  const options = key ? (VOCABULARY as any)[category]?.[key] : (VOCABULARY as any)[category];
   if (!options || options.length === 0) return "";
   return options[Math.floor(Math.random() * options.length)];
 }
