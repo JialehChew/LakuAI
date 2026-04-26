@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { StyleGrid } from "@/components/generate/StyleGrid";
+import { PlatformSelector } from "@/components/generate/PlatformSelector";
+import { ImageTypeSelector } from "@/components/generate/ImageTypeSelector";
 import { MockGenAnimation } from "@/components/generate/MockGenAnimation";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { Upload, X, Wand2, Download, Save, Edit2, AlertCircle } from "lucide-react";
@@ -11,7 +12,8 @@ import { saveAs } from "file-saver";
 export default function GeneratePage() {
   const { t } = useTranslation();
   const [image, setImage] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState("minimalist");
+  const [selectedPlatform, setSelectedPlatform] = useState("shopee");
+  const [selectedImageType, setSelectedImageType] = useState("main");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("Untilted Project");
@@ -21,7 +23,6 @@ export default function GeneratePage() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 4MB for demo)
       if (file.size > 4 * 1024 * 1024) {
         setError("Image too large. Please upload an image under 4MB.");
         return;
@@ -38,16 +39,16 @@ export default function GeneratePage() {
     setIsGenerating(true);
     setError(null);
 
-    console.log("Starting generation with style:", selectedStyle);
+    console.log("Starting generation:", { platform: selectedPlatform, type: selectedImageType });
 
     try {
-      // Definitive POST to /api/generate
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          image: image, // Base64 data from FileReader
-          style: selectedStyle,
+          image,
+          platform: selectedPlatform,
+          imageType: selectedImageType,
         }),
       });
 
@@ -60,13 +61,13 @@ export default function GeneratePage() {
 
       setGeneratedImage(data.image);
 
-      // Save to library (localStorage)
       const library = JSON.parse(localStorage.getItem("lakuai-library") || "[]");
       const newProject = {
         id: Date.now(),
         name: projectName,
         image: data.image,
-        style: selectedStyle,
+        platform: selectedPlatform,
+        imageType: selectedImageType,
         date: new Date().toISOString(),
       };
       localStorage.setItem("lakuai-library", JSON.stringify([newProject, ...library]));
@@ -184,15 +185,23 @@ export default function GeneratePage() {
           <div>
             <h2 className="text-xl font-bold font-lexend mb-4 flex items-center gap-2">
               <span className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm">1</span>
-              {t.generate.selectStyle}
+              {t.generate.selectPlatform}
             </h2>
-            <StyleGrid selectedStyle={selectedStyle} onSelect={setSelectedStyle} />
+            <PlatformSelector selectedPlatform={selectedPlatform} onSelect={setSelectedPlatform} />
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold font-lexend mb-4 flex items-center gap-2">
+              <span className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm">2</span>
+              {t.generate.selectImageType}
+            </h2>
+            <ImageTypeSelector selectedType={selectedImageType} onSelect={setSelectedImageType} />
           </div>
 
           <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 text-white shadow-lg shadow-indigo-100">
             <h3 className="text-xl font-bold font-lexend mb-2">Pro Tip 💡</h3>
             <p className="text-indigo-100 text-sm leading-relaxed">
-              For best results, use a product photo with good lighting and a clear background. Our AI works best when the product is the main focus!
+              Selection of Platform and Image Type helps our AI optimize the background and lighting for better conversion.
             </p>
           </div>
         </div>
