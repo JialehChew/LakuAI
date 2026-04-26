@@ -37,21 +37,18 @@ export async function POST(request: Request) {
 
     const finalPrompt = `A professional product photo: The product from the image in a ${platformPrompt}, ${typePrompt}. High-end commercial grade, 8k resolution, maintain original product details.`;
 
-    // Aligned with openai/gpt-image-2/edit schema requirements from logs
+    // Simplified payload based on latest log feedback
     const payload = {
       prompt: finalPrompt,
-      // Wrap image into image_urls array with 'path' field
-      image_urls: [
-        { path: image }
-      ],
-      // Use supported enum "square_hd"
+      // Simplified array of strings
+      image_urls: [image],
       image_size: "square_hd",
       quality: "low",
     };
 
-    console.log('Sending Payload to Fal.ai:', JSON.stringify({
+    console.log('Sending Payload to Fal.ai (simplified):', JSON.stringify({
       ...payload,
-      image_urls: [{ path: "DATA_URL_REDACTED" }]
+      image_urls: ["DATA_URL_REDACTED"]
     }));
 
     // Using openai/gpt-image-2/edit
@@ -73,7 +70,6 @@ export async function POST(request: Request) {
     const result = await response.json();
     console.log('Fal API Success Result:', JSON.stringify(result));
 
-    // Extraction logic for gpt-image-2/edit
     const imageUrl = result.image?.url || result.images?.[0]?.url;
 
     if (!imageUrl) {
