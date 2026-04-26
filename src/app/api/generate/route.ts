@@ -37,16 +37,24 @@ export async function POST(request: Request) {
 
     const finalPrompt = `A professional product photo: The product from the image in a ${platformPrompt}, ${typePrompt}. High-end commercial grade, 8k resolution, maintain original product details.`;
 
+    // Aligned with openai/gpt-image-2/edit schema requirements from logs
     const payload = {
       prompt: finalPrompt,
-      image_url: image,
-      image_size: "1024x1024",
+      // Wrap image into image_urls array with 'path' field
+      image_urls: [
+        { path: image }
+      ],
+      // Use supported enum "square_hd"
+      image_size: "square_hd",
       quality: "low",
     };
 
-    console.log('Requesting generation with platform:', platform, 'and type:', imageType);
+    console.log('Sending Payload to Fal.ai:', JSON.stringify({
+      ...payload,
+      image_urls: [{ path: "DATA_URL_REDACTED" }]
+    }));
 
-    // Using openai/gpt-image-2/edit for cost efficiency and NLU
+    // Using openai/gpt-image-2/edit
     const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
       method: "POST",
       headers: {
@@ -59,14 +67,17 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Fal API Error Response:', JSON.stringify(errorData));
-      throw new Error(errorData.detail || 'Fal AI Request failed');
+      throw new Error(errorData.detail || JSON.stringify(errorData) || 'Fal AI Request failed');
     }
 
     const result = await response.json();
+    console.log('Fal API Success Result:', JSON.stringify(result));
+
+    // Extraction logic for gpt-image-2/edit
     const imageUrl = result.image?.url || result.images?.[0]?.url;
 
     if (!imageUrl) {
-      throw new Error("No image URL returned from API");
+      throw new Error(`No image URL in result: ${JSON.stringify(result)}`);
     }
 
     return NextResponse.json({ image: imageUrl });
