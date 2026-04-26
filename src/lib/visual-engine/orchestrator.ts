@@ -9,6 +9,7 @@ export interface WorkflowStatus {
 }
 
 export interface GenerationStepResult {
+  id: string;
   type: string;
   vso: VisualStrategyObject;
   prompt: string;
@@ -27,6 +28,10 @@ export class VisualWorkflowOrchestrator {
     return PLATFORM_SUITES[this.input.platform.toLowerCase()] || PLATFORM_SUITES.shopee;
   }
 
+  /**
+   * Prepares a generation step with Narrative Balance.
+   * Ensures the suite doesn't have repetitive moods or compositions.
+   */
   prepareStep(imageDef: SuiteImageDefinition): { prompt: string; vso: VisualStrategyObject } {
     const stepInput: EngineInput = {
       ...this.input,
@@ -34,18 +39,29 @@ export class VisualWorkflowOrchestrator {
       narrativeGoal: imageDef.narrativeGoal
     };
 
-    // Sequential Adaptation: Adjust VSO based on what came before
     const result = generateVisualPrompt(stepInput);
 
-    // Check for repetitive composition in history
-    if (this.history.some(h => h.vso.composition === result.vso.composition)) {
-      // Suggest composition variety if previous step used same layout
-      if (result.vso.composition === 'centered') {
-        result.vso.composition = 'rule_of_thirds';
+    // NARRATIVE BALANCE: Explicitly vary the mood/lighting based on step role
+    if (imageDef.narrativeGoal === 'lifestyle') {
+      result.vso.mood = 'warm_lifestyle';
+      result.vso.lighting = 'natural_daylight';
+    } else if (imageDef.narrativeGoal === 'attention') {
+      result.vso.mood = 'vibrant';
+    }
+
+    // AVOID REPETITION: Check composition of previous step
+    if (this.history.length > 0) {
+      const prev = this.history[this.history.length - 1];
+      if (prev.vso.composition === result.vso.composition) {
+        // Switch from centered to rule of thirds if repeating
+        if (result.vso.composition === 'centered') {
+          result.vso.composition = 'rule_of_thirds';
+        }
       }
     }
 
     this.history.push({
+      id: Math.random().toString(36).substr(2, 9),
       type: imageDef.type,
       vso: result.vso,
       prompt: result.prompt
@@ -63,9 +79,6 @@ export class VisualWorkflowOrchestrator {
   }
 }
 
-/**
- * Lightweight simulation of a generation queue for Phase 4.
- */
 export async function runCommercialWorkflow(
   input: EngineInput,
   onProgress: (status: WorkflowStatus) => void,
@@ -76,16 +89,13 @@ export async function runCommercialWorkflow(
 
   for (const imageDef of suite) {
     const { prompt } = orchestrator.prepareStep(imageDef);
-
     try {
-      // Simulate/Trigger API generation
       const url = await generateFn(prompt);
       const status = orchestrator.getStatus();
       status.completedSteps[status.completedSteps.length - 1].url = url;
       onProgress(status);
     } catch (error) {
-      console.error(`Failed generating suite step ${imageDef.type}:`, error);
-      // Logic for retry foundation could go here
+      console.error(`Failed suite step ${imageDef.type}:`, error);
     }
   }
 }

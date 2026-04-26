@@ -5,9 +5,20 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { PlatformSelector } from "@/components/generate/PlatformSelector";
 import { ImageTypeSelector } from "@/components/generate/ImageTypeSelector";
 import { MockGenAnimation } from "@/components/generate/MockGenAnimation";
+import { ProgressTracker, ProgressStep } from "@/components/generate/ProgressTracker";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Upload, X, Wand2, Download, Save, Edit2, AlertCircle, FileText } from "lucide-react";
+import {
+  Upload, X, Wand2, Download, Save, Edit2, AlertCircle,
+  FileText, ShieldCheck, Zap, Sparkles, RefreshCw, LayoutGrid, Loader2
+} from "lucide-react";
 import { saveAs } from "file-saver";
+import { cn } from "@/lib/utils";
+
+interface GeneratedImage {
+  id: string;
+  url: string;
+  type: string;
+}
 
 export default function GeneratePage() {
   const { t } = useTranslation();
@@ -19,10 +30,20 @@ export default function GeneratePage() {
   const [scenario, setScenario] = useState("");
 
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
+
   const [projectName, setProjectName] = useState("Untilted Project");
   const [isEditingName, setIsEditingName] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'simple' | 'pro'>('simple');
+
+  const [steps, setSteps] = useState<ProgressStep[]>([
+    { id: 'analyze', label: 'Analyzing packaging...', status: 'pending' },
+    { id: 'platform', label: 'Detecting platform behavior...', status: 'pending' },
+    { id: 'strategy', label: 'Planning visual strategy...', status: 'pending' },
+    { id: 'generate', label: 'Generating Commercial Suite...', status: 'pending' },
+  ]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,208 +59,177 @@ export default function GeneratePage() {
     }
   };
 
+  const updateStep = (id: string, status: ProgressStep['status']) => {
+    setSteps(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+  };
+
+  const generateSingle = async (type: string) => {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image,
+        platform: selectedPlatform,
+        imageType: type,
+        product: productNameInput,
+        sellingPoint,
+        scenario,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Generation failed");
+    return data.image;
+  };
+
   const handleGenerate = async () => {
     if (!image) return;
     setIsGenerating(true);
     setError(null);
+    setGeneratedImages([]);
 
     try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image,
-          platform: selectedPlatform,
-          imageType: selectedImageType,
-          product: productNameInput,
-          sellingPoint,
-          scenario,
-        }),
-      });
+      updateStep('analyze', 'loading');
+      await new Promise(r => setTimeout(r, 600));
+      updateStep('analyze', 'completed');
+      updateStep('platform', 'loading');
+      await new Promise(r => setTimeout(r, 500));
+      updateStep('platform', 'completed');
+      updateStep('strategy', 'loading');
+      await new Promise(r => setTimeout(r, 400));
+      updateStep('strategy', 'completed');
+      updateStep('generate', 'loading');
 
-      const data = await response.json();
+      const mainUrl = await generateSingle(selectedImageType);
+      const mainImg = { id: Date.now().toString(), url: mainUrl, type: selectedImageType };
+      setGeneratedImages([mainImg]);
+      setActiveImageId(mainImg.id);
 
-      if (!response.ok) {
-        throw new Error(data.error || "Generation failed");
+      if (mode === 'simple') {
+        const uspUrl = await generateSingle('usp');
+        setGeneratedImages(prev => [...prev, { id: (Date.now() + 1).toString(), url: uspUrl, type: 'usp' }]);
       }
-
-      setGeneratedImage(data.image);
-
-      const library = JSON.parse(localStorage.getItem("lakuai-library") || "[]");
-      const newProject = {
-        id: Date.now(),
-        name: projectName,
-        image: data.image,
-        platform: selectedPlatform,
-        imageType: selectedImageType,
-        product: productNameInput,
-        date: new Date().toISOString(),
-      };
-      localStorage.setItem("lakuai-library", JSON.stringify([newProject, ...library]));
+      updateStep('generate', 'completed');
     } catch (err: any) {
-      console.error("Fetch Error:", err);
-      setError(err.message || "Something went wrong. Please check your API key.");
+      setError(err.message || "Something went wrong.");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleDownload = () => {
-    if (generatedImage) {
-      saveAs(generatedImage, `${projectName}.png`);
+  const handleRegenerateActive = async () => {
+    const active = generatedImages.find(img => img.id === activeImageId);
+    if (!active || isGenerating) return;
+
+    setIsGenerating(true);
+    try {
+      const newUrl = await generateSingle(active.type);
+      setGeneratedImages(prev => prev.map(img => img.id === activeImageId ? { ...img, url: newUrl } : img));
+    } catch (err: any) {
+      setError(err.message || "Regeneration failed.");
+    } finally {
+      setIsGenerating(false);
     }
   };
+
+  const activeImage = generatedImages.find(img => img.id === activeImageId);
 
   return (
     <DashboardLayout>
       <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {isEditingName ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                className="text-2xl font-bold font-lexend bg-transparent border-b-2 border-indigo-600 focus:outline-none px-1"
-                autoFocus
-                onBlur={() => setIsEditingName(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
-              />
-              <button onClick={() => setIsEditingName(false)} className="text-indigo-600"><Save className="w-5 h-5" /></button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingName(true)}>
-              <h1 className="text-2xl font-bold font-lexend text-gray-900">{projectName}</h1>
-              <Edit2 className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          )}
+        <div className="flex items-center gap-4">
+          <h1 onClick={() => setIsEditingName(true)} className="text-2xl font-bold font-lexend text-gray-900 cursor-pointer">
+            {isEditingName ? (
+              <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="bg-transparent border-b-2 border-indigo-600 focus:outline-none" autoFocus onBlur={() => setIsEditingName(false)} />
+            ) : projectName}
+          </h1>
+
+          <div className="flex bg-gray-100 p-1 rounded-xl">
+             <button onClick={() => setMode('simple')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Simple</button>
+             <button onClick={() => setMode('pro')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro</button>
+          </div>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        {/* Workspace */}
         <div className="space-y-6">
-          <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 aspect-square relative overflow-hidden flex flex-col items-center justify-center p-8 group shadow-sm transition-all hover:border-indigo-300">
-            {generatedImage ? (
-              <img src={generatedImage} className="w-full h-full object-contain" alt="Generated result" />
+          <div className="bg-white rounded-[2rem] border-2 border-dashed border-gray-200 aspect-square relative overflow-hidden flex flex-col items-center justify-center p-8 shadow-sm group">
+            {activeImage ? (
+              <>
+                <img src={activeImage.url} className="w-full h-full object-contain animate-in fade-in duration-500" alt="View" />
+                {!isGenerating && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={handleRegenerateActive} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 text-indigo-600 hover:bg-white transition-all">
+                      <RefreshCw className="w-3 h-3" /> Regenerate This Shot
+                    </button>
+                    <button onClick={() => saveAs(activeImage.url, `${projectName}-${activeImage.type}.png`)} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-gray-600 hover:bg-white">
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                {isGenerating && <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center"><Loader2 className="w-10 h-10 text-indigo-600 animate-spin" /></div>}
+              </>
             ) : image ? (
               <>
-                <img src={image} className="w-full h-full object-contain" alt="Upload preview" />
+                <img src={image} className="w-full h-full object-contain" alt="Preview" />
                 {isGenerating && <MockGenAnimation />}
-                {!isGenerating && (
-                  <button
-                    onClick={() => {setImage(null); setGeneratedImage(null);}}
-                    className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-lg hover:text-red-600 transition-colors z-30"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
               </>
             ) : (
-              <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Upload className="w-8 h-8" />
-                </div>
+              <label className="cursor-pointer flex flex-col items-center">
+                <Upload className="w-12 h-12 text-indigo-600 mb-4" />
                 <h3 className="text-lg font-bold font-lexend mb-1">{t.generate.uploadTitle}</h3>
-                <p className="text-gray-500 text-sm">{t.generate.uploadDesc}</p>
                 <input type="file" className="hidden" accept="image/*" onChange={handleUpload} />
               </label>
             )}
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center gap-3 text-red-600 text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              {error}
+          {generatedImages.length > 0 && (
+            <div className="grid grid-cols-4 gap-4">
+              {generatedImages.map((img) => (
+                <button key={img.id} onClick={() => setActiveImageId(img.id)} className={cn("aspect-square rounded-xl overflow-hidden border-2 transition-all", activeImageId === img.id ? "border-indigo-600 scale-105" : "border-transparent opacity-60 hover:opacity-100")}>
+                  <img src={img.url} className="w-full h-full object-cover" alt="Suite" />
+                </button>
+              ))}
+              {isGenerating && <div className="aspect-square rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center"><Loader2 className="w-5 h-5 text-indigo-300 animate-spin" /></div>}
             </div>
           )}
 
-          <div className="flex gap-4">
-            <button
-              onClick={handleGenerate}
-              disabled={!image || isGenerating}
-              className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-indigo-200 transition-all active:scale-[0.98]"
-            >
-              {isGenerating ? (
-                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t.common.loading}</>
-              ) : (
-                <><Wand2 className="w-5 h-5" /> {t.generate.btnGenerate}</>
-              )}
-            </button>
+          {isGenerating && !activeImageId && <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl"><ProgressTracker steps={steps} /></div>}
 
-            {(generatedImage || (image && !isGenerating)) && (
-              <button
-                onClick={() => {
-                  if (generatedImage) {
-                    handleDownload();
-                  } else {
-                    setImage(null);
-                    setGeneratedImage(null);
-                  }
-                }}
-                className="bg-white border-2 border-indigo-100 text-indigo-700 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all shadow-sm active:scale-[0.98]"
-              >
-                {generatedImage ? <Download className="w-5 h-5" /> : <X className="w-5 h-5" />}
-              </button>
-            )}
+          <div className="flex gap-4">
+            <button onClick={handleGenerate} disabled={!image || isGenerating} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-200 active:scale-[0.98]">
+              {isGenerating ? <Loader2 className="animate-spin" /> : <Zap className="w-5 h-5 fill-white" />}
+              {isGenerating ? "Team is working..." : "Generate Listing Suite"}
+            </button>
           </div>
         </div>
 
-        {/* Options */}
         <div className="space-y-8">
-          {/* User Brief Priority Section */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-4">
-             <h2 className="text-lg font-bold font-lexend flex items-center gap-2">
-               <FileText className="w-5 h-5 text-indigo-600" />
-               User Brief
-             </h2>
-             <div className="space-y-3">
-               <div>
-                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">{t.generate.productLabel}</label>
-                 <input
-                   type="text"
-                   value={productNameInput}
-                   onChange={(e) => setProductNameInput(e.target.value)}
-                   placeholder={t.generate.productPlaceholder}
-                   className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                 />
-               </div>
-               <div>
-                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">{t.generate.sellingPointLabel}</label>
-                 <input
-                   type="text"
-                   value={sellingPoint}
-                   onChange={(e) => setSellingPoint(e.target.value)}
-                   placeholder={t.generate.sellingPointPlaceholder}
-                   className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                 />
-               </div>
-               <div>
-                 <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block">{t.generate.scenarioLabel}</label>
-                 <input
-                   type="text"
-                   value={scenario}
-                   onChange={(e) => setScenario(e.target.value)}
-                   placeholder={t.generate.scenarioPlaceholder}
-                   className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                 />
-               </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center gap-3">
+              <ShieldCheck className="text-indigo-600 w-5 h-5" />
+              <div><p className="text-[10px] font-bold text-indigo-400 uppercase">Preservation</p><p className="text-xs font-bold text-indigo-900">Lock Active</p></div>
+            </div>
+            <div className="bg-violet-50/50 p-4 rounded-2xl border border-violet-100 flex items-center gap-3">
+              <Sparkles className="text-violet-600 w-5 h-5" />
+              <div><p className="text-[10px] font-bold text-violet-400 uppercase">Optimized</p><p className="text-xs font-bold text-violet-900">Shopee MY</p></div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-6">
+             <h2 className="text-lg font-bold font-lexend flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Listing Details</h2>
+             <div className="space-y-4">
+               <input type="text" value={productNameInput} onChange={(e) => setProductNameInput(e.target.value)} placeholder={t.generate.productPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm" />
+               {mode === 'pro' && (
+                 <>
+                   <input type="text" value={sellingPoint} onChange={(e) => setSellingPoint(e.target.value)} placeholder={t.generate.sellingPointPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm" />
+                   <input type="text" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder={t.generate.scenarioPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm" />
+                 </>
+               )}
              </div>
           </div>
 
-          <div>
-            <h2 className="text-xl font-bold font-lexend mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm">1</span>
-              {t.generate.selectPlatform}
-            </h2>
+          <div className={cn("space-y-8", mode === 'simple' && "opacity-50 pointer-events-none grayscale")}>
             <PlatformSelector selectedPlatform={selectedPlatform} onSelect={setSelectedPlatform} />
-          </div>
-
-          <div>
-            <h2 className="text-xl font-bold font-lexend mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center text-sm">2</span>
-              {t.generate.selectImageType}
-            </h2>
             <ImageTypeSelector selectedType={selectedImageType} onSelect={setSelectedImageType} />
           </div>
         </div>
