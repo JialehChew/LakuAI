@@ -1,17 +1,21 @@
 import { VisualStrategyObject } from '../types';
 import { COMPOSITION_RULES } from '../constants/composition-rules';
 
-export function applyCompositionRules(strategy: VisualStrategyObject, platform: string, imageType: string): VisualStrategyObject {
+export function applyCompositionRules(strategy: VisualStrategyObject, platform: string, imageType: string, historicalTrends?: any): VisualStrategyObject {
   const ruleKey = `${platform.toLowerCase()}_${imageType.toLowerCase()}` as keyof typeof COMPOSITION_RULES;
-  const rule = COMPOSITION_RULES[ruleKey];
+  let rule = { ...COMPOSITION_RULES[ruleKey] };
 
-  if (rule) {
-    // Map existing VSO keys to these specific rules
+  // ADAPTIVE OVERRIDE: If data shows a trend for better performance
+  // In a real system, historicalTrends would be fetched from strategy-performance.json
+  if (historicalTrends?.boostScale) {
+    rule.subjectScale = Math.min(1.0, (rule.subjectScale || 0.7) + 0.1);
+  }
+
+  if (rule && Object.keys(rule).length > 0) {
     return {
       ...strategy,
-      composition: rule.subjectPosition as any,
-      // Framing 'medium' corresponds to our 0.7 scale roughly
-      framing: rule.subjectScale > 0.7 ? 'tight' : 'medium',
+      composition: (rule as any).subjectPosition || 'centered',
+      framing: (rule as any).subjectScale > 0.75 ? 'tight' : 'medium',
     };
   }
 

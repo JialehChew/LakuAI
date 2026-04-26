@@ -1,0 +1,40 @@
+{
+  "positive_indicators": [
+    {
+      "key": "clear_product_visibility",
+      "impact": "High. Essential for mobile-first shoppers to identify the item instantly."
+    },
+    {
+      "key": "realistic_shadow_contact",
+      "impact": "High. Reduces 'AI-float' look and increases commercial trust."
+    },
+    {
+      "key": "natural_malaysian_atmosphere",
+      "impact": "Medium. Improves local authenticity and emotional connection."
+    },
+    {
+      "key": "balanced_negative_space",
+      "impact": "Medium. Allows for future Shopee/TikTok text overlays."
+    }
+  ],
+  "negative_indicators": [
+    {
+      "key": "overly_cinematic",
+      "impact": "High. Often feels like fake AI art rather than a real product photo."
+    },
+    {
+      "key": "distracting_background",
+      "impact": "Medium. Pulls focus away from the main conversion subject."
+    },
+    {
+      "key": "lighting_mismatch",
+      "impact": "Medium. Product feels 'pasted' onto the scene due to lighting inconsistencies."
+    }
+  ],
+  "realism_checklist": [
+    "Does it look like a real photo taken by a professional seller?",
+    "Is the lighting consistent across the product and the environment?",
+    "Are the shadows realistic and grounded?",
+    "Does it avoid the 'ultra-glossy' AI filter look?"
+  ]
+}

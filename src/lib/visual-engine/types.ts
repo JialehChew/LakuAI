@@ -6,6 +6,7 @@ export interface ProductIdentity {
   coreShape?: string;
   primaryColor?: string;
   sellingPoint?: string;
+  structuralRisks?: any[];
 }
 
 export interface VisualStrategyObject {
