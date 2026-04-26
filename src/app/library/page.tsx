@@ -12,7 +12,8 @@ interface Project {
   id: number;
   name: string;
   image: string;
-  style: string;
+  platform: string;
+  imageType: string;
   date: string;
 }
 
@@ -90,12 +91,17 @@ export default function LibraryPage() {
               </div>
               <div className="p-4">
                 <h3 className="font-bold font-lexend text-gray-900 truncate text-sm">{project.name}</h3>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded">
-                    {t.generate.styles[project.style as keyof typeof t.generate.styles]}
-                  </span>
-                  <span className="text-[10px] text-gray-400 font-medium">
-                    {new Date(project.date).toLocaleDateString()}
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 px-1.5 py-0.5 rounded">
+                      {t.generate.platforms[project.platform as keyof typeof t.generate.platforms] || project.platform}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {new Date(project.date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-violet-600 font-bold uppercase tracking-wider bg-violet-50 px-1.5 py-0.5 rounded w-fit">
+                    {t.generate.imageTypes[project.imageType as keyof typeof t.generate.imageTypes] || project.imageType}
                   </span>
                 </div>
               </div>
