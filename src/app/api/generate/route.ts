@@ -24,20 +24,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    console.log(`Requesting generation with style: ${style} using flux-kontext-pro`);
+    console.log(`Requesting generation with style: ${style} using gpt-image-2/edit`);
 
-    // Using flux-kontext-pro for better structure preservation
-    const response = await fetch("https://fal.run/fal-ai/flux-kontext-pro", {
+    // Using openai/gpt-image-2/edit for cost efficiency and NLU
+    const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
       method: "POST",
       headers: {
         "Authorization": `Key ${falKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        prompt: `Professional product photography: The product from the image placed in a ${promptDetails}. High-end commercial grade, 8k resolution, sharp focus, vibrant colors, maintain original product shape and details.`,
+        prompt: `Place the product from the original image in a ${promptDetails}. Ensure the product is centered and scaled realistically. Do not alter the product's appearance.`,
         image_url: image,
-        // Optional: Add parameters to increase fidelity if supported by the specific model version
-        // structure_preservation: 1.0,
+        // Model-specific parameters for cost efficiency
+        quality: "low",
+        size: "1024x1024",
       }),
     });
 
@@ -49,7 +50,15 @@ export async function POST(request: Request) {
 
     const result = await response.json();
     console.log('Fal API Success:', result);
-    return NextResponse.json({ image: result.images[0].url });
+
+    // Adjust result mapping based on typical Fal.ai response structure for this model
+    const imageUrl = result.images?.[0]?.url || result.image?.url;
+
+    if (!imageUrl) {
+      throw new Error("No image URL returned from API");
+    }
+
+    return NextResponse.json({ image: imageUrl });
   } catch (error: any) {
     console.error('Fal AI Route Error:', error);
     return NextResponse.json({ error: error.message || 'AI Generation failed' }, { status: 500 });
