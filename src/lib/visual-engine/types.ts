@@ -29,6 +29,13 @@ export interface CampaignContext {
   colorFocus?: string[];
 }
 
+export interface CommercialInsight {
+  id: string;
+  type: 'readability' | 'trend' | 'preservation' | 'workflow';
+  message: string;
+  impact: 'low' | 'medium' | 'high';
+}
+
 export interface VisualStrategyObject {
   mood: 'vibrant' | 'minimalist' | 'dreamy' | 'commercial_clean' | 'warm_lifestyle';
   lighting: 'soft_diffused' | 'golden_hour' | 'natural_daylight' | 'high_contrast_studio';
@@ -50,6 +57,7 @@ export interface EngineInput {
   sellingPoint?: string;
   scenario?: string;
   narrativeGoal?: string;
-  brand?: BrandIdentity; // New: Brand memory
-  campaign?: CampaignContext; // New: Campaign engine
+  brand?: BrandIdentity;
+  campaign?: CampaignContext;
+  isRefresh?: boolean; // New: Workflow layer
 }

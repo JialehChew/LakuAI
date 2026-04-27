@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { PlatformSelector } from "@/components/generate/PlatformSelector";
 import { ImageTypeSelector } from "@/components/generate/ImageTypeSelector";
@@ -8,9 +8,10 @@ import { MockGenAnimation } from "@/components/generate/MockGenAnimation";
 import { ProgressTracker, ProgressStep } from "@/components/generate/ProgressTracker";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
+import { getCommercialRecommendations } from "@/lib/visual-engine/utils/recommender";
 import {
   Upload, X, Wand2, Download, Save, Edit2, AlertCircle,
-  FileText, ShieldCheck, Zap, Sparkles, RefreshCw, LayoutGrid, Loader2, ThumbsUp, ThumbsDown
+  FileText, ShieldCheck, Zap, Sparkles, RefreshCw, LayoutGrid, Loader2, ThumbsUp, ThumbsDown, Info, ArrowUpRight
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import { cn } from "@/lib/utils";
@@ -41,8 +42,8 @@ export default function GeneratePage() {
 
   const [steps, setSteps] = useState<ProgressStep[]>([
     { id: 'analyze', label: 'Analyzing packaging...', status: 'pending' },
-    { id: 'platform', label: 'Detecting platform behavior...', status: 'pending' },
-    { id: 'strategy', label: 'Planning visual strategy...', status: 'pending' },
+    { id: 'behavior', label: 'Optimizing for mobile shoppers...', status: 'pending' },
+    { id: 'consistency', label: 'Ensuring brand consistency...', status: 'pending' },
     { id: 'generate', label: 'Generating Commercial Suite...', status: 'pending' },
   ]);
 
@@ -94,12 +95,12 @@ export default function GeneratePage() {
       updateStep('analyze', 'loading');
       await new Promise(r => setTimeout(r, 600));
       updateStep('analyze', 'completed');
-      updateStep('platform', 'loading');
+      updateStep('behavior', 'loading');
       await new Promise(r => setTimeout(r, 500));
-      updateStep('platform', 'completed');
-      updateStep('strategy', 'loading');
+      updateStep('behavior', 'completed');
+      updateStep('consistency', 'loading');
       await new Promise(r => setTimeout(r, 400));
-      updateStep('strategy', 'completed');
+      updateStep('consistency', 'completed');
       updateStep('generate', 'loading');
 
       const mainUrl = await generateSingle(selectedImageType);
@@ -122,9 +123,7 @@ export default function GeneratePage() {
   const handleRegenerateActive = async () => {
     const active = generatedImages.find(img => img.id === activeImageId);
     if (!active || isGenerating) return;
-
     trackMerchantAction('image_regenerated', { type: active.type, platform: selectedPlatform });
-
     setIsGenerating(true);
     try {
       const newUrl = await generateSingle(active.type);
@@ -136,12 +135,8 @@ export default function GeneratePage() {
     }
   };
 
-  const handleDownload = (img: GeneratedImage) => {
-    trackMerchantAction('image_downloaded', { type: img.type, platform: selectedPlatform });
-    saveAs(img.url, `${projectName}-${img.type}.png`);
-  };
-
   const activeImage = generatedImages.find(img => img.id === activeImageId);
+  const insights = getCommercialRecommendations({ image: image || '', platform: selectedPlatform, imageType: selectedImageType, product: productNameInput, sellingPoint });
 
   return (
     <DashboardLayout>
@@ -152,10 +147,9 @@ export default function GeneratePage() {
               <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="bg-transparent border-b-2 border-indigo-600 focus:outline-none" autoFocus onBlur={() => setIsEditingName(false)} />
             ) : projectName}
           </h1>
-
           <div className="flex bg-gray-100 p-1 rounded-xl">
-             <button onClick={() => {setMode('simple'); trackMerchantAction('mode_switched', { to: 'simple' })}} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Simple</button>
-             <button onClick={() => {setMode('pro'); trackMerchantAction('mode_switched', { to: 'pro' })}} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro</button>
+             <button onClick={() => setMode('simple')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Simple</button>
+             <button onClick={() => setMode('pro')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro</button>
           </div>
         </div>
       </div>
@@ -171,12 +165,9 @@ export default function GeneratePage() {
                     <button onClick={handleRegenerateActive} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 text-indigo-600 hover:bg-white transition-all">
                       <RefreshCw className="w-3 h-3" /> Regenerate
                     </button>
-                    <button onClick={() => handleDownload(activeImage)} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-gray-600 hover:bg-white">
+                    <button onClick={() => {trackMerchantAction('image_downloaded', { type: activeImage.type }); saveAs(activeImage.url, `${projectName}-${activeImage.type}.png`)}} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-gray-600 hover:bg-white">
                       <Download className="w-4 h-4" />
                     </button>
-                    <div className="h-8 w-px bg-gray-200 mx-1" />
-                    <button onClick={() => trackMerchantAction('feedback_submitted', { type: activeImage.type, sentiment: 'positive' })} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-green-600 hover:bg-white"><ThumbsUp className="w-4 h-4" /></button>
-                    <button onClick={() => trackMerchantAction('feedback_submitted', { type: activeImage.type, sentiment: 'negative' })} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-red-600 hover:bg-white"><ThumbsDown className="w-4 h-4" /></button>
                   </div>
                 )}
                 {isGenerating && <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center"><Loader2 className="w-10 h-10 text-indigo-600 animate-spin" /></div>}
@@ -202,7 +193,6 @@ export default function GeneratePage() {
                   <img src={img.url} className="w-full h-full object-cover" alt="Suite" />
                 </button>
               ))}
-              {isGenerating && <div className="aspect-square rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center"><Loader2 className="w-5 h-5 text-indigo-300 animate-spin" /></div>}
             </div>
           )}
 
@@ -211,18 +201,30 @@ export default function GeneratePage() {
           <div className="flex gap-4">
             <button onClick={handleGenerate} disabled={!image || isGenerating} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-200 active:scale-[0.98]">
               {isGenerating ? <Loader2 className="animate-spin" /> : <Zap className="w-5 h-5 fill-white" />}
-              {isGenerating ? "Team is working..." : "Generate Listing Suite"}
+              {isGenerating ? "My Creative Team is Working..." : "Generate Listing Suite"}
             </button>
           </div>
         </div>
 
         <div className="space-y-8">
+          {/* Seller Insights Panel */}
+          {insights.length > 0 && (
+            <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 space-y-2">
+              <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase tracking-wider">
+                <Info className="w-4 h-4" /> Seller Insights
+              </div>
+              {insights.map(i => (
+                <p key={i.id} className="text-xs text-amber-700 leading-relaxed font-medium">{i.message}</p>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 flex items-center gap-3">
               <ShieldCheck className="text-indigo-600 w-5 h-5" />
               <div><p className="text-[10px] font-bold text-indigo-400 uppercase">Preservation</p><p className="text-xs font-bold text-indigo-900">Lock Active</p></div>
             </div>
-            <div className="bg-violet-50/50 p-4 rounded-2xl border border-violet-100 flex items-center gap-3" title="Simplified background for better product clarity">
+            <div className="bg-violet-50/50 p-4 rounded-2xl border border-violet-100 flex items-center gap-3">
               <Sparkles className="text-violet-600 w-5 h-5" />
               <div><p className="text-[10px] font-bold text-violet-400 uppercase">Optimized</p><p className="text-xs font-bold text-violet-900">Shopee MY</p></div>
             </div>
@@ -231,11 +233,11 @@ export default function GeneratePage() {
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-6">
              <h2 className="text-lg font-bold font-lexend flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Listing Details</h2>
              <div className="space-y-4">
-               <input type="text" value={productNameInput} onChange={(e) => setProductNameInput(e.target.value)} placeholder={t.generate.productPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none" />
+               <input type="text" value={productNameInput} onChange={(e) => setProductNameInput(e.target.value)} placeholder={t.generate.productPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20" />
                {mode === 'pro' && (
                  <>
-                   <input type="text" value={sellingPoint} onChange={(e) => setSellingPoint(e.target.value)} placeholder={t.generate.sellingPointPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm animate-in slide-in-from-top-2 duration-300 focus:ring-2 focus:ring-indigo-500/20 outline-none" />
-                   <input type="text" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder={t.generate.scenarioPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm animate-in slide-in-from-top-2 duration-300 focus:ring-2 focus:ring-indigo-500/20 outline-none" />
+                   <input type="text" value={sellingPoint} onChange={(e) => setSellingPoint(e.target.value)} placeholder={t.generate.sellingPointPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20" />
+                   <input type="text" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder={t.generate.scenarioPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20" />
                  </>
                )}
              </div>

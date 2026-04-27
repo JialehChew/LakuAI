@@ -8,7 +8,10 @@ export type MerchantEvent =
   | 'image_regenerated'
   | 'generation_abandoned'
   | 'mode_switched'
-  | 'feedback_submitted';
+  | 'feedback_submitted'
+  | 'listing_published' // New: Success signal
+  | 'campaign_adapted'  // New: Retention signal
+  | 'asset_reused';     // New: Efficiency signal
 
 export function trackMerchantAction(event: MerchantEvent, metadata: Record<string, any> = {}) {
   const logEntry = {
