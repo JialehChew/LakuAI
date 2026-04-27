@@ -9,12 +9,14 @@ export function buildAdvertisingBrief(vso: VisualStrategyObject, identity: Produ
   const anchorLayer = `STRICTLY PRESERVE the product's ${identity.sellingPoint || 'original appearance'}. Do not simplify or change the colors of the ${identity.name}. The branding and logo on the product packaging must remain exactly as shown in the original image, without any alteration.`;
   parts.push(anchorLayer);
 
-  // 2. Brand Identity Layer (NEW)
+  // 2. Brand Identity Layer
   const brandPhrase = getRandomPhrase('brand_consistency');
   parts.push(brandPhrase);
 
-  // 3. Narrative Goal Injection
-  if (input?.narrativeGoal === 'attention') {
+  // 3. Narrative Goal Injection (With Clean Hero Logic)
+  if (input?.imageType === 'main') {
+    parts.push("NARRATIVE GOAL: Premium marketplace hero shot. High-end professional product photography. Centered composition on a clean, simple, non-distracting background. Maximum product focus, sharp details, absolutely no cluttered or collage-like elements.");
+  } else if (input?.narrativeGoal === 'attention') {
     parts.push("NARRATIVE GOAL: Capture immediate attention. The product should pop from the background with high contrast and sharp focus.");
   } else if (input?.narrativeGoal === 'trust') {
     parts.push("NARRATIVE GOAL: Build buyer trust. Focus on authentic materials and realistic lighting that looks like an unedited professional photo.");

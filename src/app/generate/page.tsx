@@ -10,7 +10,7 @@ import { ProgressStep } from "@/components/generate/ProgressTracker";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
 import { saveAs } from "file-saver";
-import { Zap } from "lucide-react";
+import { Zap, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function GeneratePage() {
@@ -53,9 +53,9 @@ export default function GeneratePage() {
     setOrchestrationSteps(prev => prev.map(s => s.id === id ? { ...s, status } : s));
   };
 
-  const generateStep = async (stepId: string) => {
+  const generateStepWithRetry = async (stepId: string, retries = 1): Promise<boolean> => {
     const step = productionSteps.find(s => s.id === stepId);
-    if (!step || !image) return;
+    if (!step || !image) return false;
 
     setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'generating' } : s));
 
@@ -75,9 +75,15 @@ export default function GeneratePage() {
 
       setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'completed', url: data.image } : s));
       setActiveStepId(stepId);
+      return true;
     } catch (err) {
-      console.error(err);
+      console.error(`Generation failed for ${step.label}:`, err);
+      if (retries > 0) {
+        console.log(`Retrying ${step.label}...`);
+        return generateStepWithRetry(stepId, retries - 1);
+      }
       setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'pending' } : s));
+      return false;
     }
   };
 
@@ -106,11 +112,11 @@ export default function GeneratePage() {
     updateOrchestration('render', 'loading');
     setCurrentAction("Producing Creative Assets...");
 
-    await generateStep('1');
+    // ROBUST SEQUENTIAL GENERATION: Ensure all assets in mode are tried
+    const stepsToRun = mode === 'simple' ? ['1', '2', '3'] : ['1'];
 
-    if (mode === 'simple') {
-      generateStep('2');
-      generateStep('3');
+    for (const sId of stepsToRun) {
+       await generateStepWithRetry(sId);
     }
 
     updateOrchestration('render', 'completed');
@@ -119,10 +125,21 @@ export default function GeneratePage() {
   };
 
   const activeImage = productionSteps.find(s => s.id === activeStepId)?.url;
+  const isSuiteComplete = productionSteps.filter(s => s.url).length >= (mode === 'simple' ? 3 : 1);
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-160px)] xl:h-[calc(100vh-96px)] -m-6 md:-m-12 overflow-y-auto lg:overflow-hidden bg-white lg:rounded-3xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-160px)] xl:h-[calc(100vh-96px)] -m-6 md:-m-12 overflow-y-auto lg:overflow-hidden bg-white lg:rounded-3xl border border-gray-100 shadow-sm relative">
+          {/* Completion Payoff Overlay */}
+          {isSuiteComplete && !isGenerating && (
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
+               <div className="bg-green-600 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 border-2 border-white">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="text-sm font-bold">Commercial Suite Ready</span>
+               </div>
+            </div>
+          )}
+
           {/* LEFT: Setup */}
           <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 bg-white z-10">
             <div className="flex-1 lg:overflow-y-auto">
@@ -148,7 +165,7 @@ export default function GeneratePage() {
                   "hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98]"
                 )}
               >
-                <Zap className="w-4 h-4 fill-white" /> Start Production
+                <Zap className="w-4 h-4 fill-white" /> {isSuiteComplete ? "Regenerate Full Suite" : "Start Production"}
               </button>
             </div>
           </aside>
@@ -170,7 +187,7 @@ export default function GeneratePage() {
               steps={productionSteps}
               activeStepId={activeStepId}
               onSelect={setActiveStepId}
-              onRegenerate={generateStep}
+              onRegenerate={generateStepWithRetry}
               onDownload={(url, type) => {
                 trackMerchantAction('image_downloaded', { type });
                 saveAs(url, `${productName}-${type}.png`);
