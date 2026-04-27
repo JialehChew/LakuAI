@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
-import { Download, Trash2, Image as ImageIcon } from "lucide-react";
+import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
+import { Download, Trash2, Image as ImageIcon, RefreshCcw, LayoutGrid } from "lucide-react";
 import { saveAs } from "file-saver";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 interface Project {
   id: number;
@@ -21,6 +23,7 @@ export default function LibraryPage() {
   const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const saved = localStorage.getItem("lakuai-library");
@@ -36,15 +39,17 @@ export default function LibraryPage() {
     localStorage.setItem("lakuai-library", JSON.stringify(updated));
   };
 
-  const downloadImage = (image: string, name: string) => {
-    saveAs(image, `${name}.png`);
+  const handleRefresh = (project: Project) => {
+    trackMerchantAction('campaign_adapted', { from: project.id, type: project.imageType });
+    // In a real app, this would pre-fill the generate page with the project data
+    router.push('/generate');
   };
 
   if (!isLoaded) return null;
 
   return (
     <DashboardLayout>
-      <div className="mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <h1 className="text-4xl font-bold font-lexend text-gray-900">{t.library.title}</h1>
       </div>
 
@@ -55,10 +60,7 @@ export default function LibraryPage() {
           </div>
           <h2 className="text-2xl font-bold font-lexend text-gray-900 mb-2">{t.library.emptyTitle}</h2>
           <p className="text-gray-500 mb-8 max-w-sm mx-auto">{t.library.emptyDesc}</p>
-          <Link
-            href="/generate"
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-[0.98]"
-          >
+          <Link href="/generate" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg active:scale-[0.98]">
             {t.library.createFirst}
           </Link>
         </div>
@@ -70,21 +72,18 @@ export default function LibraryPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
-              className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-50 transition-all duration-300"
+              className="group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-indigo-200 hover:shadow-xl transition-all duration-300"
             >
               <div className="aspect-square relative overflow-hidden bg-gray-50">
                 <img src={project.image} alt={project.name} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-indigo-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
-                  <button
-                    onClick={() => downloadImage(project.image, project.name)}
-                    className="p-3 bg-white rounded-full text-indigo-700 hover:bg-indigo-50 transition-colors shadow-lg"
-                  >
+                  <button onClick={() => {trackMerchantAction('image_downloaded', { id: project.id }); saveAs(project.image, `${project.name}.png`)}} className="p-3 bg-white rounded-full text-indigo-700 hover:bg-indigo-50 shadow-lg">
                     <Download className="w-5 h-5" />
                   </button>
-                  <button
-                    onClick={() => deleteProject(project.id)}
-                    className="p-3 bg-white rounded-full text-red-500 hover:bg-red-50 transition-colors shadow-lg"
-                  >
+                  <button onClick={() => handleRefresh(project)} title="Refresh / Adapt for Campaign" className="p-3 bg-white rounded-full text-violet-700 hover:bg-violet-50 shadow-lg">
+                    <RefreshCcw className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => deleteProject(project.id)} className="p-3 bg-white rounded-full text-red-500 hover:bg-red-50 shadow-lg">
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
@@ -94,15 +93,12 @@ export default function LibraryPage() {
                 <div className="flex flex-col gap-1 mt-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider bg-indigo-50 px-1.5 py-0.5 rounded">
-                      {t.generate.platforms[project.platform as keyof typeof t.generate.platforms] || project.platform}
+                      {project.platform}
                     </span>
                     <span className="text-[10px] text-gray-400 font-medium">
                       {new Date(project.date).toLocaleDateString()}
                     </span>
                   </div>
-                  <span className="text-[9px] text-violet-600 font-bold uppercase tracking-wider bg-violet-50 px-1.5 py-0.5 rounded w-fit">
-                    {t.generate.imageTypes[project.imageType as keyof typeof t.generate.imageTypes] || project.imageType}
-                  </span>
                 </div>
               </div>
             </motion.div>

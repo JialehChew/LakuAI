@@ -1,4 +1,4 @@
-import { EngineInput, VisualStrategyObject, ProductIdentity } from './types';
+import { EngineInput, VisualStrategyObject, ProductIdentity, CampaignContext } from './types';
 import { PLATFORM_SUITES, SuiteImageDefinition } from './constants/suites';
 import { generateVisualPrompt } from './index';
 
@@ -29,19 +29,20 @@ export class VisualWorkflowOrchestrator {
   }
 
   /**
-   * Prepares a generation step with Narrative Balance.
-   * Ensures the suite doesn't have repetitive moods or compositions.
+   * Supports both new generations and "Listing Refreshes" for campaigns.
    */
-  prepareStep(imageDef: SuiteImageDefinition): { prompt: string; vso: VisualStrategyObject } {
+  prepareStep(imageDef: SuiteImageDefinition, overrideCampaign?: CampaignContext): { prompt: string; vso: VisualStrategyObject } {
     const stepInput: EngineInput = {
       ...this.input,
       imageType: imageDef.type,
-      narrativeGoal: imageDef.narrativeGoal
+      narrativeGoal: imageDef.narrativeGoal,
+      campaign: overrideCampaign || this.input.campaign,
+      isRefresh: !!overrideCampaign
     };
 
     const result = generateVisualPrompt(stepInput);
 
-    // NARRATIVE BALANCE: Explicitly vary the mood/lighting based on step role
+    // NARRATIVE BALANCE
     if (imageDef.narrativeGoal === 'lifestyle') {
       result.vso.mood = 'warm_lifestyle';
       result.vso.lighting = 'natural_daylight';
@@ -49,15 +50,9 @@ export class VisualWorkflowOrchestrator {
       result.vso.mood = 'vibrant';
     }
 
-    // AVOID REPETITION: Check composition of previous step
-    if (this.history.length > 0) {
-      const prev = this.history[this.history.length - 1];
-      if (prev.vso.composition === result.vso.composition) {
-        // Switch from centered to rule of thirds if repeating
-        if (result.vso.composition === 'centered') {
-          result.vso.composition = 'rule_of_thirds';
-        }
-      }
+    // REFRESH ENGINE LOGIC: If refreshing for a campaign, ensure campaign mood is dominant
+    if (stepInput.isRefresh) {
+      result.vso.conversionGoal = 'stop_the_scroll';
     }
 
     this.history.push({
