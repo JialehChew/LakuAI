@@ -12,9 +12,10 @@ export type MerchantEvent =
   | 'listing_published'
   | 'campaign_adapted'
   | 'asset_reused'
-  | 'workflow_stalled'      // New: Reliability signal
-  | 'retry_triggered'       // New: Reliability signal
-  | 'retry_success';        // New: Reliability signal
+  | 'workflow_stalled'
+  | 'retry_triggered'
+  | 'retry_success'
+  | 'workflow_completed'; // Fixed: Added missing event
 
 export function trackMerchantAction(event: MerchantEvent, metadata: Record<string, any> = {}) {
   const logEntry = {

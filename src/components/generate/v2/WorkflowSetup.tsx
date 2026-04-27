@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload, FileText, Globe, Zap, Palette, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, Globe, Zap, Palette, ShieldCheck, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WorkflowSetupProps {
@@ -23,7 +23,6 @@ export const WorkflowSetup = ({ onUpload, platform, setPlatform, mode, setMode, 
           Production Setup
         </h2>
 
-        {/* Upload Area */}
         <label className={cn(
           "group flex flex-col items-center justify-center aspect-video rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden relative",
           isUploaded ? "border-green-100 bg-green-50/20" : "border-gray-100 bg-gray-50/50 hover:bg-white hover:border-indigo-200"
@@ -35,10 +34,14 @@ export const WorkflowSetup = ({ onUpload, platform, setPlatform, mode, setMode, 
           <input type="file" className="hidden" accept="image/*" onChange={onUpload} />
         </label>
 
-        {/* Workflow Mode */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
-           <button onClick={() => setMode('simple')} className={cn("py-2 text-[10px] font-bold rounded-lg transition-all", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Quick Suite</button>
-           <button onClick={() => setMode('pro')} className={cn("py-2 text-[10px] font-bold rounded-lg transition-all", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro Editor</button>
+        <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl relative">
+           <button onClick={() => setMode('simple')} className={cn("py-2 text-[10px] font-bold rounded-lg transition-all z-10", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>
+             Quick Suite
+           </button>
+           <button onClick={() => setMode('pro')} className={cn("py-2 text-[10px] font-bold rounded-lg transition-all z-10", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro Editor</button>
+           {mode === 'simple' && (
+             <div className="absolute -top-2 -right-1 bg-indigo-600 text-white text-[7px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter shadow-sm animate-bounce">Last Used</div>
+           )}
         </div>
       </div>
 
