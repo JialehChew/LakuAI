@@ -11,6 +11,7 @@ import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
 import { saveAs } from "file-saver";
 import { Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function GeneratePage() {
   const { t } = useTranslation();
@@ -41,6 +42,7 @@ export default function GeneratePage() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      trackMerchantAction('feedback_submitted', { type: 'upload_success' });
       const reader = new FileReader();
       reader.onload = (e) => setImage(e.target?.result as string);
       reader.readAsDataURL(file);
@@ -72,7 +74,7 @@ export default function GeneratePage() {
       if (!response.ok) throw new Error(data.error);
 
       setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'completed', url: data.image } : s));
-      if (!activeStepId) setActiveStepId(stepId);
+      setActiveStepId(stepId);
     } catch (err) {
       console.error(err);
       setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'pending' } : s));
@@ -84,35 +86,31 @@ export default function GeneratePage() {
     setIsGenerating(true);
     trackMerchantAction('suite_generated', { platform: selectedPlatform, mode });
 
-    // Reset Steps
     setOrchestrationSteps(prev => prev.map(s => ({ ...s, status: 'pending' })));
 
-    // Simulate Orchestration
     setCurrentAction("Analyzing Product Packaging...");
     updateOrchestration('identity', 'loading');
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 400));
     updateOrchestration('identity', 'completed');
 
     setCurrentAction("Detecting Marketplace Trends...");
     updateOrchestration('behavior', 'loading');
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 300));
     updateOrchestration('behavior', 'completed');
 
     setCurrentAction("Engineering Visual Strategy...");
     updateOrchestration('composition', 'loading');
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 200));
     updateOrchestration('composition', 'completed');
 
     updateOrchestration('render', 'loading');
     setCurrentAction("Producing Creative Assets...");
 
-    // Start production sequence
     await generateStep('1');
-    setActiveStepId('1');
 
     if (mode === 'simple') {
-      await generateStep('2');
-      await generateStep('3');
+      generateStep('2');
+      generateStep('3');
     }
 
     updateOrchestration('render', 'completed');
@@ -124,10 +122,10 @@ export default function GeneratePage() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-160px)] md:h-[calc(100vh-96px)] -m-6 md:-m-12 overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-160px)] xl:h-[calc(100vh-96px)] -m-6 md:-m-12 overflow-y-auto lg:overflow-hidden bg-white lg:rounded-3xl border border-gray-100 shadow-sm">
           {/* LEFT: Setup */}
-          <aside className="w-80 flex-shrink-0 flex flex-col border-r border-gray-100">
-            <div className="flex-1 overflow-y-auto">
+          <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 bg-white z-10">
+            <div className="flex-1 lg:overflow-y-auto">
               <WorkflowSetup
                 onUpload={handleUpload}
                 platform={selectedPlatform}
@@ -136,6 +134,7 @@ export default function GeneratePage() {
                 setMode={setMode}
                 productName={productName}
                 setProductName={setProductName}
+                isUploaded={!!image}
               />
             </div>
             <div className="p-6 border-t border-gray-50 bg-white">
@@ -143,7 +142,11 @@ export default function GeneratePage() {
               <button
                 onClick={handleStartWorkflow}
                 disabled={!image || isGenerating}
-                className="w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98] transition-all"
+                className={cn(
+                  "w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all",
+                  image && !isGenerating && !productionSteps[0].url ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100",
+                  "hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98]"
+                )}
               >
                 <Zap className="w-4 h-4 fill-white" /> Start Production
               </button>
@@ -151,16 +154,18 @@ export default function GeneratePage() {
           </aside>
 
           {/* CENTER: Workspace */}
-          <CreativeWorkspace
-            image={image}
-            activeImage={activeImage || null}
-            isGenerating={isGenerating}
-            steps={orchestrationSteps}
-            currentAction={currentAction}
-          />
+          <main className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 bg-[#F8FAFF]">
+            <CreativeWorkspace
+              image={image}
+              activeImage={activeImage || null}
+              isGenerating={isGenerating}
+              steps={orchestrationSteps}
+              currentAction={currentAction}
+            />
+          </main>
 
           {/* RIGHT: Timeline */}
-          <aside className="w-80 flex-shrink-0">
+          <aside className="w-full lg:w-80 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100 bg-white lg:overflow-y-auto">
             <ProductionTimeline
               steps={productionSteps}
               activeStepId={activeStepId}
