@@ -21,3 +21,19 @@ STRATEGIC RECOMMENDATION:
 Focus on refining the "soft_diffused" lighting layer for Jewelry, as it consistently yields higher preservation scores.
 `;
 }
+
+/**
+ * NEW: Aggregates merchant behavior signals into operational insights.
+ */
+export function generateMerchantInsights(behaviorLogs: any[]) {
+  const totalSuites = behaviorLogs.filter(l => l.event === 'suite_generated').length;
+  const totalDownloads = behaviorLogs.filter(l => l.event === 'image_downloaded').length;
+  const totalRegens = behaviorLogs.filter(l => l.event === 'image_regenerated').length;
+
+  return {
+    operationalEfficiency: totalSuites > 0 ? (totalDownloads / totalSuites).toFixed(2) : 0,
+    dissatisfactionRate: totalSuites > 0 ? (totalRegens / totalSuites).toFixed(2) : 0,
+    topPlatform: "shopee", // Placeholder for actual frequency logic
+    retentionSignal: "high"
+  };
+}

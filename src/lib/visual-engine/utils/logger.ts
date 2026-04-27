@@ -13,6 +13,10 @@ export interface GenerationLog {
     vso?: VisualStrategyObject;
     spio?: ProductIdentity;
     finalPrompt: string;
+    consistencyCheck?: {
+      lightingMatch: boolean;
+      colorHarmony: boolean;
+    };
   };
   output: {
     resultUrl: string;
@@ -20,8 +24,7 @@ export interface GenerationLog {
 }
 
 export function logGeneration(log: GenerationLog) {
-  // In a production environment, this would go to a database or structured log aggregator.
-  // For benchmarking, we log to console for easy extraction from Render/Local logs.
+  // Log to console for initial validation phase
   console.log('--- VISUAL INTELLIGENCE LOG START ---');
   console.log(JSON.stringify(log, null, 2));
   console.log('--- VISUAL INTELLIGENCE LOG END ---');

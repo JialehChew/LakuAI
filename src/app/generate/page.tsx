@@ -77,9 +77,9 @@ export default function GeneratePage() {
       setActiveStepId(stepId);
       return true;
     } catch (err) {
-      console.error(`Generation failed for ${step.label}:`, err);
+      trackMerchantAction('workflow_stalled', { step: step.type, error: err });
       if (retries > 0) {
-        console.log(`Retrying ${step.label}...`);
+        trackMerchantAction('retry_triggered', { step: step.type });
         return generateStepWithRetry(stepId, retries - 1);
       }
       setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'pending' } : s));
@@ -90,6 +90,7 @@ export default function GeneratePage() {
   const handleStartWorkflow = async () => {
     if (!image || isGenerating) return;
     setIsGenerating(true);
+    const startTime = Date.now();
     trackMerchantAction('suite_generated', { platform: selectedPlatform, mode });
 
     setOrchestrationSteps(prev => prev.map(s => ({ ...s, status: 'pending' })));
@@ -112,7 +113,6 @@ export default function GeneratePage() {
     updateOrchestration('render', 'loading');
     setCurrentAction("Producing Creative Assets...");
 
-    // ROBUST SEQUENTIAL GENERATION: Ensure all assets in mode are tried
     const stepsToRun = mode === 'simple' ? ['1', '2', '3'] : ['1'];
 
     for (const sId of stepsToRun) {
@@ -122,6 +122,9 @@ export default function GeneratePage() {
     updateOrchestration('render', 'completed');
     setCurrentAction("Suite Production Complete");
     setIsGenerating(false);
+
+    const duration = (Date.now() - startTime) / 1000;
+    trackMerchantAction('workflow_completed', { durationSeconds: duration, assetCount: stepsToRun.length });
   };
 
   const activeImage = productionSteps.find(s => s.id === activeStepId)?.url;
@@ -130,7 +133,6 @@ export default function GeneratePage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col lg:flex-row h-full lg:h-[calc(100vh-160px)] xl:h-[calc(100vh-96px)] -m-6 md:-m-12 overflow-y-auto lg:overflow-hidden bg-white lg:rounded-3xl border border-gray-100 shadow-sm relative">
-          {/* Completion Payoff Overlay */}
           {isSuiteComplete && !isGenerating && (
             <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
                <div className="bg-green-600 text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-2 border-2 border-white">
@@ -140,7 +142,6 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* LEFT: Setup */}
           <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 bg-white z-10">
             <div className="flex-1 lg:overflow-y-auto">
               <WorkflowSetup
@@ -170,7 +171,6 @@ export default function GeneratePage() {
             </div>
           </aside>
 
-          {/* CENTER: Workspace */}
           <main className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 bg-[#F8FAFF]">
             <CreativeWorkspace
               image={image}
@@ -181,7 +181,6 @@ export default function GeneratePage() {
             />
           </main>
 
-          {/* RIGHT: Timeline */}
           <aside className="w-full lg:w-80 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100 bg-white lg:overflow-y-auto">
             <ProductionTimeline
               steps={productionSteps}

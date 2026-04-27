@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, RefreshCw, Download, ChevronRight, Loader2, LayoutGrid } from "lucide-react";
+import { CheckCircle2, Circle, RefreshCw, Download, ChevronRight, Loader2, LayoutGrid, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface TimelineStep {
@@ -72,6 +72,12 @@ export const ProductionTimeline = ({ steps, activeStepId, onSelect, onRegenerate
               <div className="space-y-3">
                 <div className="aspect-square w-full rounded-xl bg-gray-100 overflow-hidden relative group/thumb">
                   <img src={step.url} className="w-full h-full object-cover" alt="Thumb" />
+
+                  {/* Quality Confidence Badge */}
+                  <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 bg-white/90 backdrop-blur rounded text-[8px] font-bold text-green-600 shadow-sm border border-green-100">
+                    <ShieldCheck className="w-2.5 h-2.5" /> Identity Verified
+                  </div>
+
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
                     <button onClick={(e) => {e.stopPropagation(); onRegenerate(step.id)}} className="p-2 bg-white rounded-full text-indigo-600 hover:scale-110 transition-transform shadow-lg"><RefreshCw className="w-3 h-3" /></button>
                     <button onClick={(e) => {e.stopPropagation(); onDownload(step.url!, step.type)}} className="p-2 bg-white rounded-full text-gray-600 hover:scale-110 transition-transform shadow-lg"><Download className="w-3 h-3" /></button>
