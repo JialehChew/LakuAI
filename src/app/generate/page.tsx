@@ -7,9 +7,10 @@ import { ImageTypeSelector } from "@/components/generate/ImageTypeSelector";
 import { MockGenAnimation } from "@/components/generate/MockGenAnimation";
 import { ProgressTracker, ProgressStep } from "@/components/generate/ProgressTracker";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
 import {
   Upload, X, Wand2, Download, Save, Edit2, AlertCircle,
-  FileText, ShieldCheck, Zap, Sparkles, RefreshCw, LayoutGrid, Loader2
+  FileText, ShieldCheck, Zap, Sparkles, RefreshCw, LayoutGrid, Loader2, ThumbsUp, ThumbsDown
 } from "lucide-react";
 import { saveAs } from "file-saver";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,8 @@ export default function GeneratePage() {
     setError(null);
     setGeneratedImages([]);
 
+    trackMerchantAction('suite_generated', { platform: selectedPlatform, mode });
+
     try {
       updateStep('analyze', 'loading');
       await new Promise(r => setTimeout(r, 600));
@@ -120,6 +123,8 @@ export default function GeneratePage() {
     const active = generatedImages.find(img => img.id === activeImageId);
     if (!active || isGenerating) return;
 
+    trackMerchantAction('image_regenerated', { type: active.type, platform: selectedPlatform });
+
     setIsGenerating(true);
     try {
       const newUrl = await generateSingle(active.type);
@@ -129,6 +134,11 @@ export default function GeneratePage() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleDownload = (img: GeneratedImage) => {
+    trackMerchantAction('image_downloaded', { type: img.type, platform: selectedPlatform });
+    saveAs(img.url, `${projectName}-${img.type}.png`);
   };
 
   const activeImage = generatedImages.find(img => img.id === activeImageId);
@@ -144,8 +154,8 @@ export default function GeneratePage() {
           </h1>
 
           <div className="flex bg-gray-100 p-1 rounded-xl">
-             <button onClick={() => setMode('simple')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Simple</button>
-             <button onClick={() => setMode('pro')} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro</button>
+             <button onClick={() => {setMode('simple'); trackMerchantAction('mode_switched', { to: 'simple' })}} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'simple' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Simple</button>
+             <button onClick={() => {setMode('pro'); trackMerchantAction('mode_switched', { to: 'pro' })}} className={cn("px-4 py-1.5 text-xs font-bold rounded-lg", mode === 'pro' ? "bg-white shadow-sm text-indigo-600" : "text-gray-500")}>Pro</button>
           </div>
         </div>
       </div>
@@ -159,11 +169,14 @@ export default function GeneratePage() {
                 {!isGenerating && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={handleRegenerateActive} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 text-indigo-600 hover:bg-white transition-all">
-                      <RefreshCw className="w-3 h-3" /> Regenerate This Shot
+                      <RefreshCw className="w-3 h-3" /> Regenerate
                     </button>
-                    <button onClick={() => saveAs(activeImage.url, `${projectName}-${activeImage.type}.png`)} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-gray-600 hover:bg-white">
+                    <button onClick={() => handleDownload(activeImage)} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-gray-600 hover:bg-white">
                       <Download className="w-4 h-4" />
                     </button>
+                    <div className="h-8 w-px bg-gray-200 mx-1" />
+                    <button onClick={() => trackMerchantAction('feedback_submitted', { type: activeImage.type, sentiment: 'positive' })} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-green-600 hover:bg-white"><ThumbsUp className="w-4 h-4" /></button>
+                    <button onClick={() => trackMerchantAction('feedback_submitted', { type: activeImage.type, sentiment: 'negative' })} className="bg-white/90 backdrop-blur shadow-lg border border-gray-100 p-2 rounded-full text-red-600 hover:bg-white"><ThumbsDown className="w-4 h-4" /></button>
                   </div>
                 )}
                 {isGenerating && <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center"><Loader2 className="w-10 h-10 text-indigo-600 animate-spin" /></div>}
@@ -209,7 +222,7 @@ export default function GeneratePage() {
               <ShieldCheck className="text-indigo-600 w-5 h-5" />
               <div><p className="text-[10px] font-bold text-indigo-400 uppercase">Preservation</p><p className="text-xs font-bold text-indigo-900">Lock Active</p></div>
             </div>
-            <div className="bg-violet-50/50 p-4 rounded-2xl border border-violet-100 flex items-center gap-3">
+            <div className="bg-violet-50/50 p-4 rounded-2xl border border-violet-100 flex items-center gap-3" title="Simplified background for better product clarity">
               <Sparkles className="text-violet-600 w-5 h-5" />
               <div><p className="text-[10px] font-bold text-violet-400 uppercase">Optimized</p><p className="text-xs font-bold text-violet-900">Shopee MY</p></div>
             </div>
@@ -218,11 +231,11 @@ export default function GeneratePage() {
           <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-6">
              <h2 className="text-lg font-bold font-lexend flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Listing Details</h2>
              <div className="space-y-4">
-               <input type="text" value={productNameInput} onChange={(e) => setProductNameInput(e.target.value)} placeholder={t.generate.productPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm" />
+               <input type="text" value={productNameInput} onChange={(e) => setProductNameInput(e.target.value)} placeholder={t.generate.productPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none" />
                {mode === 'pro' && (
                  <>
-                   <input type="text" value={sellingPoint} onChange={(e) => setSellingPoint(e.target.value)} placeholder={t.generate.sellingPointPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm" />
-                   <input type="text" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder={t.generate.scenarioPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm" />
+                   <input type="text" value={sellingPoint} onChange={(e) => setSellingPoint(e.target.value)} placeholder={t.generate.sellingPointPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm animate-in slide-in-from-top-2 duration-300 focus:ring-2 focus:ring-indigo-500/20 outline-none" />
+                   <input type="text" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder={t.generate.scenarioPlaceholder} className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm animate-in slide-in-from-top-2 duration-300 focus:ring-2 focus:ring-indigo-500/20 outline-none" />
                  </>
                )}
              </div>
