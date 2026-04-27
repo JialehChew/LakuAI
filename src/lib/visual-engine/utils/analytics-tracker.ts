@@ -9,9 +9,12 @@ export type MerchantEvent =
   | 'generation_abandoned'
   | 'mode_switched'
   | 'feedback_submitted'
-  | 'listing_published' // New: Success signal
-  | 'campaign_adapted'  // New: Retention signal
-  | 'asset_reused';     // New: Efficiency signal
+  | 'listing_published'
+  | 'campaign_adapted'
+  | 'asset_reused'
+  | 'workflow_stalled'      // New: Reliability signal
+  | 'retry_triggered'       // New: Reliability signal
+  | 'retry_success';        // New: Reliability signal
 
 export function trackMerchantAction(event: MerchantEvent, metadata: Record<string, any> = {}) {
   const logEntry = {
@@ -20,7 +23,7 @@ export function trackMerchantAction(event: MerchantEvent, metadata: Record<strin
     ...metadata
   };
 
-  // Log to console for initial validation phase (to be viewed in Render logs)
+  // Log to console for initial validation phase
   console.log('--- MERCHANT BEHAVIOR SIGNAL ---');
   console.log(JSON.stringify(logEntry, null, 2));
 }
