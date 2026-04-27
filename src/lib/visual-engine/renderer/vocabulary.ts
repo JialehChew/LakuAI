@@ -39,6 +39,11 @@ export const VOCABULARY = {
     "The product makes realistic contact with the surface, casting a subtle, natural shadow.",
     "Ensure the item is grounded in the scene with professional shadow-contact details.",
     "The interaction between the product and its environment looks authentic and physically grounded."
+  ],
+  brand_consistency: [
+    "This shot must perfectly align with the core visual identity of a digital artisan's premium collection.",
+    "Maintain the established brand mood, ensuring the product feels like part of a unified commercial system.",
+    "The visual tone should be consistent with a high-end, professionally curated brand listing."
   ]
 };
 
