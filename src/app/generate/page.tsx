@@ -54,35 +54,31 @@ export default function GeneratePage() {
     const orchestrator = new VisualWorkflowOrchestrator({ image, platform: selectedPlatform, product: productName, imageType: 'main' });
     const plan = orchestrator.planSuite();
 
-    // Initialize Local Timeline UI from plan
-    const initialTimeline: TimelineStep[] = plan.map(p => ({
-      id: p.type, // simplified for demo
-      type: p.type,
-      label: p.description,
-      status: 'pending'
-    }));
-    setTimelineSteps(initialTimeline);
-
+    setTimelineSteps(plan.map(p => ({ id: p.type, type: p.type, label: p.description, status: 'pending' })));
     setOrchestrationSteps(prev => prev.map(s => ({ ...s, status: 'pending' })));
-    setCurrentAction("Initializing Production Pipeline...");
 
-    // Progress Narrative
+    setCurrentAction("Extracting Product from Background...");
     updateOrchestration('identity', 'loading');
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 600));
     updateOrchestration('identity', 'completed');
+
+    setCurrentAction("Normalizing Commercial Environment...");
     updateOrchestration('behavior', 'loading');
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 400));
     updateOrchestration('behavior', 'completed');
 
-    // Run Suite Sequentially
+    setCurrentAction("Building Listing Suite...");
+    updateOrchestration('composition', 'loading');
+
+    // PIPELINE EXECUTION
     const runSteps = mode === 'simple' ? plan.slice(0, 3) : [plan[0]];
 
     for (const pItem of runSteps) {
+       const stepId = orchestrator.prepareStep(pItem);
        setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'generating' } : s));
-       orchestrator.prepareStep(pItem);
 
        try {
-         const url = await orchestrator.executeStep(orchestrator.getStatus().completedSteps[orchestrator.getStatus().completedSteps.length - 1].id, async (p) => {
+         const url = await orchestrator.executeStep(stepId, async () => {
            const res = await fetch("/api/generate", {
              method: "POST",
              headers: { "Content-Type": "application/json" },
@@ -93,8 +89,12 @@ export default function GeneratePage() {
            return data.image;
          });
 
-         setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'completed', url } : s));
-         setActiveStepId(pItem.type);
+         if (url) {
+           setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'completed', url } : s));
+           setActiveStepId(pItem.type);
+         } else {
+           setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'pending' } : s));
+         }
        } catch (err) {
          setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'pending' } : s));
        }
@@ -106,7 +106,7 @@ export default function GeneratePage() {
   };
 
   const activeImage = timelineSteps.find(s => s.id === activeStepId)?.url;
-  const isSuiteComplete = timelineSteps.filter(s => s.url).length >= 1;
+  const isSuiteComplete = timelineSteps.some(s => s.url);
 
   return (
     <DashboardLayout>
@@ -140,7 +140,7 @@ export default function GeneratePage() {
                 disabled={!image || isGenerating}
                 className={cn(
                   "w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all",
-                  image && !isGenerating && timelineSteps.length === 0 ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100",
+                  image && !isGenerating && !isSuiteComplete ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100",
                   "hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98]"
                 )}
               >
@@ -164,7 +164,7 @@ export default function GeneratePage() {
               steps={timelineSteps}
               activeStepId={activeStepId}
               onSelect={setActiveStepId}
-              onRegenerate={() => {}} // Integration coming in next patch
+              onRegenerate={() => {}}
               onDownload={(url, type) => {
                 trackMerchantAction('image_downloaded', { type });
                 saveAs(url, `${productName}-${type}.png`);
