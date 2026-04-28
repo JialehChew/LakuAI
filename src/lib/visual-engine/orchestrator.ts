@@ -33,7 +33,7 @@ export class VisualWorkflowOrchestrator {
     return PLATFORM_SUITES[this.input.platform.toLowerCase()] || PLATFORM_SUITES.shopee;
   }
 
-  prepareStep(imageDef: SuiteImageDefinition, overrideCampaign?: CampaignContext): { prompt: string; vso: VisualStrategyObject } {
+  prepareStep(imageDef: SuiteImageDefinition, overrideCampaign?: CampaignContext): string {
     const result = generateVisualPrompt({
       ...this.input,
       imageType: imageDef.type,
@@ -42,8 +42,9 @@ export class VisualWorkflowOrchestrator {
       isRefresh: !!overrideCampaign
     });
 
+    const stepId = Math.random().toString(36).substr(2, 9);
     const stepResult: GenerationStepResult = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: stepId,
       type: imageDef.type,
       vso: result.vso,
       prompt: result.prompt,
@@ -51,7 +52,7 @@ export class VisualWorkflowOrchestrator {
     };
 
     this.history.push(stepResult);
-    return { prompt: result.prompt, vso: result.vso };
+    return stepId;
   }
 
   getStatus(): WorkflowStatus {
@@ -64,40 +65,44 @@ export class VisualWorkflowOrchestrator {
     return {
       totalSteps: this.history.length,
       currentStep: this.history.length,
-      completedSteps: this.history,
+      completedSteps: [...this.history],
       workflowResult: result
     };
   }
 
   /**
-   * Execution Logic with Timeout and Retry Protection.
+   * Execution Logic with Guaranteed Resolution.
    */
   async executeStep(stepId: string, generateFn: (p: string) => Promise<string>): Promise<string> {
-    const step = this.history.find(h => h.id === stepId);
-    if (!step) throw new Error("Step not found");
+    const stepIndex = this.history.findIndex(h => h.id === stepId);
+    if (stepIndex === -1) throw new Error("Step not found");
 
-    step.status = 'generating';
+    // Force update local history status
+    this.history[stepIndex].status = 'generating';
+
     let attempts = 0;
-
     while (attempts <= this.RETRY_LIMIT) {
       try {
-        // Implementation of 30s timeout
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Generation Timeout")), 30000)
+          setTimeout(() => reject(new Error("Timeout (45s)")), 45000)
         );
 
-        const url = await Promise.race([generateFn(step.prompt), timeoutPromise]) as string;
-        step.status = 'completed';
-        step.url = url;
+        const url = await Promise.race([generateFn(this.history[stepIndex].prompt), timeoutPromise]) as string;
+
+        if (!url) throw new Error("No URL returned");
+
+        this.history[stepIndex].status = 'completed';
+        this.history[stepIndex].url = url;
         return url;
       } catch (error: any) {
         attempts++;
-        console.error(`Attempt ${attempts} failed for ${step.type}:`, error);
+        console.error(`Attempt ${attempts} failed for ${this.history[stepIndex].type}:`, error);
+
         if (attempts > this.RETRY_LIMIT) {
-          step.status = 'failed';
-          step.error = error.message;
-          trackMerchantAction('workflow_stalled', { step: step.type, error: error.message });
-          throw error;
+          this.history[stepIndex].status = 'failed';
+          this.history[stepIndex].error = error.message;
+          trackMerchantAction('workflow_stalled', { step: this.history[stepIndex].type, error: error.message });
+          return ""; // Resolve with empty to continue pipeline
         }
       }
     }
