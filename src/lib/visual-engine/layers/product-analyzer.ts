@@ -2,18 +2,40 @@ import { ProductCategory, ProductIdentity, EngineInput } from '../types';
 import { RISK_PROFILES } from '../constants/risk-profiles';
 import { PRESERVATION_MATRIX, StructureRisk } from '../constants/structure-risks';
 
+/**
+ * Enhanced Product Analyzer with Semantic Intelligence.
+ * Infers material, usage, and structural details from user input.
+ */
 export function analyzeProduct(input: EngineInput): ProductIdentity {
-  const name = input.product || 'product';
-  const category = detectCategory(name);
-  const risks = detectStructuralRisks(name, input.sellingPoint || '');
+  const rawName = input.product || 'product';
+  const category = detectCategory(rawName);
+
+  // SEMANTIC INTELLIGENCE: Infer detailed description
+  const semanticName = inferSemanticIdentity(rawName, input.sellingPoint || '');
 
   return {
-    name,
+    name: semanticName,
     category,
     sellingPoint: input.sellingPoint,
-    // Store structural risks to influence generation strictness later
-    structuralRisks: risks
+    structuralRisks: detectStructuralRisks(rawName, input.sellingPoint || '')
   };
+}
+
+function inferSemanticIdentity(name: string, sellingPoint: string): string {
+  const text = (name + ' ' + sellingPoint).toLowerCase();
+
+  // Heuristic mapping for common Malaysian market items
+  if (text.includes('cable') || text.includes('usb')) {
+    const isBraided = text.includes('braided') ? 'braided ' : '';
+    return `premium ${isBraided}charging cable`;
+  }
+  if (text.includes('serum') || text.includes('essence')) return 'clinical grade cosmetic serum bottle';
+  if (text.includes('brooch') || text.includes('pin')) return 'elegant decorative jewelry brooch';
+  if (text.includes('sambal') || text.includes('sauce')) return 'authentic Malaysian food jar';
+  if (text.includes('sneaker') || text.includes('shoe')) return 'high-performance lifestyle sneakers';
+  if (text.includes('hijab') || text.includes('tudung')) return 'premium silk fashion hijab';
+
+  return name;
 }
 
 function detectCategory(name: string): ProductCategory {
@@ -32,10 +54,8 @@ function detectCategory(name: string): ProductCategory {
 function detectStructuralRisks(name: string, sellingPoint: string): StructureRisk[] {
   const text = (name + ' ' + sellingPoint).toLowerCase();
   const foundRisks: StructureRisk[] = [];
-
-  if (text.includes('glass') || text.includes('clear') || text.includes('bottle')) foundRisks.push(PRESERVATION_MATRIX.transparent_packaging);
-  if (text.includes('gold') || text.includes('silver') || text.includes('metal') || text.includes('chrome')) foundRisks.push(PRESERVATION_MATRIX.reflective_metal);
-  if (text.includes('label') || text.includes('text') || text.includes('ingredients')) foundRisks.push(PRESERVATION_MATRIX.tiny_text_labels);
-
+  if (text.includes('glass') || text.includes('clear')) foundRisks.push(PRESERVATION_MATRIX.transparent_packaging);
+  if (text.includes('metal') || text.includes('gold')) foundRisks.push(PRESERVATION_MATRIX.reflective_metal);
+  if (text.includes('text') || text.includes('label')) foundRisks.push(PRESERVATION_MATRIX.tiny_text_labels);
   return foundRisks;
 }

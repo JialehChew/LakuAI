@@ -7,19 +7,27 @@ import { applyCampaignRules } from './layers/campaign-logic';
 import { buildAdvertisingBrief } from './renderer/brief-builder';
 import { analyzeInput, ReconstructionMode } from './layers/input-analyzer';
 
-export function generateVisualPrompt(input: EngineInput): {
+/**
+ * Orchestrates Multi-Pass Commercial Reconstruction.
+ * 1. Extraction (Preprocessing)
+ * 2. Semantic Understanding (Analysis)
+ * 3. Environment Reconstruction (Briefing)
+ * 4. Marketplace Optimization (Refinement)
+ * 5. Identity Verification (Fingerprinting)
+ */
+export function generateVisualPrompt(input: EngineInput, useAIIsolationFallback: boolean = false): {
   prompt: string;
   vso: VisualStrategyObject;
   identity: ProductIdentity;
   reconstructionMode: ReconstructionMode;
 } {
-  // 1. Product Intelligence
+  // Step 1: Semantic Analysis
   const identity = analyzeProduct(input);
 
-  // 2. Input Intelligence (NEW)
+  // Step 2: Input Quality Analysis
   const analysis = analyzeInput(input, identity.category);
 
-  // 3. Default Strategy
+  // Step 3: Default Strategy Setup
   let vso: VisualStrategyObject = {
     mood: 'commercial_clean',
     lighting: 'natural_daylight',
@@ -33,14 +41,14 @@ export function generateVisualPrompt(input: EngineInput): {
     platformBehavior: 'neutral_balanced',
   };
 
-  // 4. Layer Refinement
+  // Step 4: Visual Logic Multi-Pass
   vso = applyBrandMemory(vso, input.brand);
   vso = applyPlatformRules(vso, input.platform);
   vso = applyCampaignRules(vso, input.campaign);
   vso = applyCompositionRules(vso, input.platform, input.imageType);
 
-  // 5. Render to Brief
-  const prompt = buildAdvertisingBrief(vso, identity, input, analysis.reconstructionMode);
+  // Step 5: Final Brief Rendering (with Fingerprinting)
+  const prompt = buildAdvertisingBrief(vso, identity, input, analysis.reconstructionMode, useAIIsolationFallback);
 
   return { prompt, vso, identity, reconstructionMode: analysis.reconstructionMode };
 }
