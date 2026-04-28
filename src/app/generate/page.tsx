@@ -9,6 +9,7 @@ import { WorkflowBlueprint } from "@/components/generate/v2/WorkflowBlueprint";
 import { ProgressStep } from "@/components/generate/ProgressTracker";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
+import { VisualWorkflowOrchestrator } from "@/lib/visual-engine/orchestrator";
 import { saveAs } from "file-saver";
 import { Zap, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,13 +32,7 @@ export default function GeneratePage() {
     { id: 'render', label: 'Finalizing commercial visuals...', status: 'pending' },
   ]);
 
-  const [productionSteps, setProductionSteps] = useState<TimelineStep[]>([
-    { id: '1', type: 'main', label: 'Hero Image', status: 'pending' },
-    { id: '2', type: 'usp', label: 'USP Feature', status: 'pending' },
-    { id: '3', type: 'lifestyle', label: 'Lifestyle Scene', status: 'pending' },
-    { id: '4', type: 'info', label: 'Trust Composition', status: 'pending' },
-    { id: '5', type: 'poster', label: 'Promo Poster', status: 'pending' },
-  ]);
+  const [timelineSteps, setTimelineSteps] = useState<TimelineStep[]>([]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,82 +48,65 @@ export default function GeneratePage() {
     setOrchestrationSteps(prev => prev.map(s => s.id === id ? { ...s, status } : s));
   };
 
-  const generateStepWithRetry = async (stepId: string, retries = 1): Promise<boolean> => {
-    const step = productionSteps.find(s => s.id === stepId);
-    if (!step || !image) return false;
-
-    setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'generating' } : s));
-
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image,
-          platform: selectedPlatform,
-          imageType: step.type,
-          product: productName,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-
-      setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'completed', url: data.image } : s));
-      setActiveStepId(stepId);
-      return true;
-    } catch (err) {
-      trackMerchantAction('workflow_stalled', { step: step.type, error: err });
-      if (retries > 0) {
-        trackMerchantAction('retry_triggered', { step: step.type });
-        return generateStepWithRetry(stepId, retries - 1);
-      }
-      setProductionSteps(prev => prev.map(s => s.id === stepId ? { ...s, status: 'pending' } : s));
-      return false;
-    }
-  };
-
   const handleStartWorkflow = async () => {
     if (!image || isGenerating) return;
     setIsGenerating(true);
-    const startTime = Date.now();
-    trackMerchantAction('suite_generated', { platform: selectedPlatform, mode });
+    const orchestrator = new VisualWorkflowOrchestrator({ image, platform: selectedPlatform, product: productName, imageType: 'main' });
+    const plan = orchestrator.planSuite();
+
+    // Initialize Local Timeline UI from plan
+    const initialTimeline: TimelineStep[] = plan.map(p => ({
+      id: p.type, // simplified for demo
+      type: p.type,
+      label: p.description,
+      status: 'pending'
+    }));
+    setTimelineSteps(initialTimeline);
 
     setOrchestrationSteps(prev => prev.map(s => ({ ...s, status: 'pending' })));
+    setCurrentAction("Initializing Production Pipeline...");
 
-    setCurrentAction("Analyzing Product Packaging...");
+    // Progress Narrative
     updateOrchestration('identity', 'loading');
     await new Promise(r => setTimeout(r, 400));
     updateOrchestration('identity', 'completed');
-
-    setCurrentAction("Detecting Marketplace Trends...");
     updateOrchestration('behavior', 'loading');
     await new Promise(r => setTimeout(r, 300));
     updateOrchestration('behavior', 'completed');
 
-    setCurrentAction("Engineering Visual Strategy...");
-    updateOrchestration('composition', 'loading');
-    await new Promise(r => setTimeout(r, 200));
-    updateOrchestration('composition', 'completed');
+    // Run Suite Sequentially
+    const runSteps = mode === 'simple' ? plan.slice(0, 3) : [plan[0]];
 
-    updateOrchestration('render', 'loading');
-    setCurrentAction("Producing Creative Assets...");
+    for (const pItem of runSteps) {
+       setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'generating' } : s));
+       orchestrator.prepareStep(pItem);
 
-    const stepsToRun = mode === 'simple' ? ['1', '2', '3'] : ['1'];
+       try {
+         const url = await orchestrator.executeStep(orchestrator.getStatus().completedSteps[orchestrator.getStatus().completedSteps.length - 1].id, async (p) => {
+           const res = await fetch("/api/generate", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ image, platform: selectedPlatform, imageType: pItem.type, product: productName }),
+           });
+           const data = await res.json();
+           if (!res.ok) throw new Error(data.error);
+           return data.image;
+         });
 
-    for (const sId of stepsToRun) {
-       await generateStepWithRetry(sId);
+         setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'completed', url } : s));
+         setActiveStepId(pItem.type);
+       } catch (err) {
+         setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'pending' } : s));
+       }
     }
 
     updateOrchestration('render', 'completed');
     setCurrentAction("Suite Production Complete");
     setIsGenerating(false);
-
-    const duration = (Date.now() - startTime) / 1000;
-    trackMerchantAction('workflow_completed', { durationSeconds: duration, assetCount: stepsToRun.length });
   };
 
-  const activeImage = productionSteps.find(s => s.id === activeStepId)?.url;
-  const isSuiteComplete = productionSteps.filter(s => s.url).length >= (mode === 'simple' ? 3 : 1);
+  const activeImage = timelineSteps.find(s => s.id === activeStepId)?.url;
+  const isSuiteComplete = timelineSteps.filter(s => s.url).length >= 1;
 
   return (
     <DashboardLayout>
@@ -162,7 +140,7 @@ export default function GeneratePage() {
                 disabled={!image || isGenerating}
                 className={cn(
                   "w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all",
-                  image && !isGenerating && !productionSteps[0].url ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100",
+                  image && !isGenerating && timelineSteps.length === 0 ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100",
                   "hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98]"
                 )}
               >
@@ -183,10 +161,10 @@ export default function GeneratePage() {
 
           <aside className="w-full lg:w-80 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100 bg-white lg:overflow-y-auto">
             <ProductionTimeline
-              steps={productionSteps}
+              steps={timelineSteps}
               activeStepId={activeStepId}
               onSelect={setActiveStepId}
-              onRegenerate={generateStepWithRetry}
+              onRegenerate={() => {}} // Integration coming in next patch
               onDownload={(url, type) => {
                 trackMerchantAction('image_downloaded', { type });
                 saveAs(url, `${productName}-${type}.png`);
