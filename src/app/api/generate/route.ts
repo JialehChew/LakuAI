@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { generateVisualPrompt } from '@/lib/visual-engine';
 import { logGeneration } from '@/lib/visual-engine/utils/logger';
 import { runPreprocessing } from '@/lib/visual-engine/layers/preprocessing';
+import { analyzeInput } from '@/lib/visual-engine/layers/input-analyzer';
+import { analyzeProduct } from '@/lib/visual-engine/layers/product-analyzer';
 
 export async function POST(request: Request) {
   try {
@@ -16,23 +18,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'FAL_KEY is not configured' }, { status: 500 });
     }
 
-    // 1. ANALYZE & PREPROCESS
-    const { prompt, vso, identity, reconstructionMode } = generateVisualPrompt({
-      platform, imageType, product, sellingPoint, scenario, image
-    });
+    // 1. Initial Analysis
+    const initialIdentity = analyzeProduct({ platform, imageType, product, sellingPoint, scenario, image });
+    const analysis = analyzeInput({ platform, imageType, product, sellingPoint, scenario, image }, initialIdentity.category);
 
-    // 2. PHYSICAL SUBJECT EXTRACTION (New Preprocessing Layer)
-    const prepResult = await runPreprocessing(image, reconstructionMode, falKey);
+    // 2. Preprocessing with AI Fallback logic
+    const prepResult = await runPreprocessing(image, analysis.reconstructionMode, falKey);
 
-    // 3. GENERATION
+    // 3. Final Prompt Generation (Aware of Isolation result)
+    const { prompt, vso, identity } = generateVisualPrompt(
+      { platform, imageType, product, sellingPoint, scenario, image },
+      prepResult.useAIIsolationFallback
+    );
+
+    // 4. Generation
     const payload = {
       prompt: prompt,
       image_urls: [prepResult.processedImageUrl],
       image_size: "square_hd",
       quality: "low",
     };
-
-    console.log('Final Strategy:', reconstructionMode, 'Isolation:', prepResult.isolationApplied);
 
     const response = await fetch("https://fal.run/openai/gpt-image-2/edit", {
       method: "POST",
@@ -51,16 +56,7 @@ export async function POST(request: Request) {
     const result = await response.json();
     const resultUrl = result.image?.url || result.images?.[0]?.url;
 
-    if (!resultUrl) {
-      throw new Error("No image URL returned from API");
-    }
-
-    logGeneration({
-      timestamp: new Date().toISOString(),
-      input: { productName: product, platform, imageType, rawInputUrl: "DATA_URL_REDACTED" },
-      engine: { name: 'visual-engine', vso, spio: identity, finalPrompt: prompt },
-      output: { resultUrl }
-    });
+    if (!resultUrl) throw new Error("No image URL returned");
 
     return NextResponse.json({ image: resultUrl });
   } catch (error: any) {

@@ -1,14 +1,14 @@
-import { EngineInput, ProductIdentity } from '../types';
 import { ReconstructionMode } from './input-analyzer';
 
 export interface PreprocessingResult {
   processedImageUrl: string;
   isolationApplied: boolean;
+  useAIIsolationFallback: boolean;
 }
 
 /**
  * Executes the real product preparation pipeline.
- * Physically isolates the subject if in 'rebuild' mode.
+ * If physical background removal fails, it flags for AI Isolation Mode.
  */
 export async function runPreprocessing(
   image: string,
@@ -16,14 +16,12 @@ export async function runPreprocessing(
   falKey: string
 ): Promise<PreprocessingResult> {
   if (mode !== 'rebuild') {
-    return { processedImageUrl: image, isolationApplied: false };
+    return { processedImageUrl: image, isolationApplied: false, useAIIsolationFallback: false };
   }
 
   console.log('--- PREPROCESSING: ISOLATING SUBJECT ---');
 
   try {
-    // Step 1: Real Background Removal via Fal.ai
-    // We use a high-quality isolation model to extract the product subject
     const response = await fetch("https://fal.run/fal-ai/bria/background-removal", {
       method: "POST",
       headers: {
@@ -36,21 +34,20 @@ export async function runPreprocessing(
     });
 
     if (!response.ok) {
-      console.warn('Background removal failed, falling back to original image');
-      return { processedImageUrl: image, isolationApplied: false };
+      console.warn('Physical background removal failed. Activating AI Isolation Fallback.');
+      return { processedImageUrl: image, isolationApplied: false, useAIIsolationFallback: true };
     }
 
     const result = await response.json();
     const isolatedUrl = result.image?.url;
 
     if (!isolatedUrl) {
-      return { processedImageUrl: image, isolationApplied: false };
+      return { processedImageUrl: image, isolationApplied: false, useAIIsolationFallback: true };
     }
 
-    console.log('--- PREPROCESSING: SUBJECT ISOLATED SUCCESSFULLY ---');
-    return { processedImageUrl: isolatedUrl, isolationApplied: true };
+    return { processedImageUrl: isolatedUrl, isolationApplied: true, useAIIsolationFallback: false };
   } catch (error) {
     console.error('Preprocessing Error:', error);
-    return { processedImageUrl: image, isolationApplied: false };
+    return { processedImageUrl: image, isolationApplied: false, useAIIsolationFallback: true };
   }
 }
