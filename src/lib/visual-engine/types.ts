@@ -9,6 +9,7 @@ export interface ProductIdentity {
   structuralRisks?: any[];
   brandMood?: string;
   lightingFeel?: string;
+  pio?: any; // New: Product Intelligence Object v2
 }
 
 export interface BrandIdentity {
@@ -59,5 +60,5 @@ export interface EngineInput {
   narrativeGoal?: string;
   brand?: BrandIdentity;
   campaign?: CampaignContext;
-  isRefresh?: boolean; // New: Workflow layer
+  isRefresh?: boolean;
 }

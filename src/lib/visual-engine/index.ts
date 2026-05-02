@@ -8,12 +8,7 @@ import { buildAdvertisingBrief } from './renderer/brief-builder';
 import { analyzeInput, ReconstructionMode } from './layers/input-analyzer';
 
 /**
- * Orchestrates Multi-Pass Commercial Reconstruction.
- * 1. Extraction (Preprocessing)
- * 2. Semantic Understanding (Analysis)
- * 3. Environment Reconstruction (Briefing)
- * 4. Marketplace Optimization (Refinement)
- * 5. Identity Verification (Fingerprinting)
+ * Orchestrates Multi-Pass Commercial Reconstruction (LakuAI V2).
  */
 export function generateVisualPrompt(input: EngineInput, useAIIsolationFallback: boolean = false): {
   prompt: string;
@@ -21,13 +16,9 @@ export function generateVisualPrompt(input: EngineInput, useAIIsolationFallback:
   identity: ProductIdentity;
   reconstructionMode: ReconstructionMode;
 } {
-  // Step 1: Semantic Analysis
   const identity = analyzeProduct(input);
-
-  // Step 2: Input Quality Analysis
   const analysis = analyzeInput(input, identity.category);
 
-  // Step 3: Default Strategy Setup
   let vso: VisualStrategyObject = {
     mood: 'commercial_clean',
     lighting: 'natural_daylight',
@@ -41,13 +32,12 @@ export function generateVisualPrompt(input: EngineInput, useAIIsolationFallback:
     platformBehavior: 'neutral_balanced',
   };
 
-  // Step 4: Visual Logic Multi-Pass
   vso = applyBrandMemory(vso, input.brand);
   vso = applyPlatformRules(vso, input.platform);
   vso = applyCampaignRules(vso, input.campaign);
   vso = applyCompositionRules(vso, input.platform, input.imageType);
 
-  // Step 5: Final Brief Rendering (with Fingerprinting)
+  // V2: Ingest the isolation fallback flag directly into the brief builder
   const prompt = buildAdvertisingBrief(vso, identity, input, analysis.reconstructionMode, useAIIsolationFallback);
 
   return { prompt, vso, identity, reconstructionMode: analysis.reconstructionMode };

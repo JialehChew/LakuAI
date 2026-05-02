@@ -26,10 +26,10 @@ export default function GeneratePage() {
   const [currentAction, setCurrentAction] = useState("Ready");
 
   const [orchestrationSteps, setOrchestrationSteps] = useState<ProgressStep[]>([
-    { id: 'extract', label: 'Removing environmental clutter...', status: 'pending' },
-    { id: 'identity', label: 'Verifying product identity...', status: 'pending' },
-    { id: 'rebuild', label: 'Reconstructing commercial scene...', status: 'pending' },
-    { id: 'optimize', label: 'Optimizing mobile visibility...', status: 'pending' },
+    { id: 'pio', label: 'Analyzing commercial category...', status: 'pending' },
+    { id: 'scene', label: 'Selecting production scene...', status: 'pending' },
+    { id: 'comp', label: 'Planning conversion framing...', status: 'pending' },
+    { id: 'memory', label: 'Locking suite consistency...', status: 'pending' },
   ]);
 
   const [timelineSteps, setTimelineSteps] = useState<TimelineStep[]>([]);
@@ -51,26 +51,30 @@ export default function GeneratePage() {
   const handleStartWorkflow = async () => {
     if (!image || isGenerating) return;
     setIsGenerating(true);
-    const startTime = Date.now();
     const orchestrator = new VisualWorkflowOrchestrator({ image, platform: selectedPlatform, product: productName, imageType: 'main' });
     const plan = orchestrator.planSuite();
 
     setTimelineSteps(plan.map(p => ({ id: p.type, type: p.type, label: p.description, status: 'pending' })));
     setOrchestrationSteps(prev => prev.map(s => ({ ...s, status: 'pending' })));
 
-    // Confidence Narration Sequence
-    setCurrentAction("Isolating Commercial Subject...");
-    updateOrchestration('extract', 'loading');
-    await new Promise(r => setTimeout(r, 700));
-    updateOrchestration('extract', 'completed');
+    // V2 Vision Narration
+    setCurrentAction("Building Product Intelligence Object...");
+    updateOrchestration('pio', 'loading');
+    await new Promise(r => setTimeout(r, 600));
+    updateOrchestration('pio', 'completed');
 
-    setCurrentAction("Locking Identity Fingerprint...");
-    updateOrchestration('identity', 'loading');
-    await new Promise(r => setTimeout(r, 500));
-    updateOrchestration('identity', 'completed');
+    setCurrentAction("Selecting Commercial Scene...");
+    updateOrchestration('scene', 'loading');
+    await new Promise(r => setTimeout(r, 400));
+    updateOrchestration('scene', 'completed');
 
-    setCurrentAction("Building Listing Assets...");
-    updateOrchestration('rebuild', 'loading');
+    setCurrentAction("Engineering Conversion Framing...");
+    updateOrchestration('comp', 'loading');
+    await new Promise(r => setTimeout(r, 400));
+    updateOrchestration('comp', 'completed');
+
+    updateOrchestration('memory', 'loading');
+    setCurrentAction("Producing Commercial Suite...");
 
     const runSteps = mode === 'simple' ? plan.slice(0, 3) : [plan[0]];
 
@@ -99,13 +103,9 @@ export default function GeneratePage() {
        }
     }
 
-    updateOrchestration('rebuild', 'completed');
-    updateOrchestration('optimize', 'completed');
-    setCurrentAction("Suite Ready for Marketplace");
+    updateOrchestration('memory', 'completed');
+    setCurrentAction("Commercial Suite Ready");
     setIsGenerating(false);
-
-    const duration = (Date.now() - startTime) / 1000;
-    trackMerchantAction('workflow_completed', { durationSeconds: duration, assetCount: runSteps.length });
   };
 
   const activeImage = timelineSteps.find(s => s.id === activeStepId)?.url;
@@ -125,54 +125,22 @@ export default function GeneratePage() {
 
           <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 bg-white z-10">
             <div className="flex-1 lg:overflow-y-auto">
-              <WorkflowSetup
-                onUpload={handleUpload}
-                platform={selectedPlatform}
-                setPlatform={setSelectedPlatform}
-                mode={mode}
-                setMode={setMode}
-                productName={productName}
-                setProductName={setProductName}
-                isUploaded={!!image}
-              />
+              <WorkflowSetup onUpload={handleUpload} platform={selectedPlatform} setPlatform={setSelectedPlatform} mode={mode} setMode={setMode} productName={productName} setProductName={setProductName} isUploaded={!!image} />
             </div>
             <div className="p-6 border-t border-gray-50 bg-white">
               <WorkflowBlueprint />
-              <button
-                onClick={handleStartWorkflow}
-                disabled={!image || isGenerating}
-                className={cn(
-                  "w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all",
-                  image && !isGenerating && !isSuiteComplete ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100",
-                  "hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98]"
-                )}
-              >
+              <button onClick={handleStartWorkflow} disabled={!image || isGenerating} className={cn("w-full mt-6 bg-indigo-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all", image && !isGenerating && timelineSteps.length === 0 ? "animate-pulse shadow-indigo-200 scale-[1.02]" : "shadow-gray-100", "hover:bg-indigo-700 disabled:opacity-50 active:scale-[0.98]")}>
                 <Zap className="w-4 h-4 fill-white" /> {isSuiteComplete ? "Regenerate Full Suite" : "Start Production"}
               </button>
             </div>
           </aside>
 
           <main className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 bg-[#F8FAFF]">
-            <CreativeWorkspace
-              image={image}
-              activeImage={activeImage || null}
-              isGenerating={isGenerating}
-              steps={orchestrationSteps}
-              currentAction={currentAction}
-            />
+            <CreativeWorkspace image={image} activeImage={activeImage || null} isGenerating={isGenerating} steps={orchestrationSteps} currentAction={currentAction} />
           </main>
 
           <aside className="w-full lg:w-80 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100 bg-white lg:overflow-y-auto">
-            <ProductionTimeline
-              steps={timelineSteps}
-              activeStepId={activeStepId}
-              onSelect={setActiveStepId}
-              onRegenerate={() => {}}
-              onDownload={(url, type) => {
-                trackMerchantAction('image_downloaded', { type });
-                saveAs(url, `${productName}-${type}.png`);
-              }}
-            />
+            <ProductionTimeline steps={timelineSteps} activeStepId={activeStepId} onSelect={setActiveStepId} onRegenerate={() => {}} onDownload={(url, type) => { trackMerchantAction('image_downloaded', { type }); saveAs(url, `${productName}-${type}.png`); }} />
           </aside>
       </div>
     </DashboardLayout>
