@@ -4,15 +4,16 @@ import { selectScene } from '@/core/commerce/scenes';
 import { getCommercialComposition } from '@/core/commerce/composition';
 
 /**
- * LakuAI V2: Brief Renderer
- * Assembles PIO, Scene Library, and Composition Engine into professional directions.
+ * LakuAI V3: Augmented Brief Renderer
+ * Assembles PIO, Scene Library, Composition Engine, and Critic Directives into professional directions.
  */
 export function buildAdvertisingBrief(
   vso: VisualStrategyObject,
   identity: ProductIdentity,
   input?: EngineInput,
   reconstructionMode: string = 'preserve',
-  useAIIsolationFallback: boolean = false
+  useAIIsolationFallback: boolean = false,
+  criticDirectives?: string[]
 ): string {
   const parts: string[] = [];
   const pio = identity.pio;
@@ -27,18 +28,23 @@ export function buildAdvertisingBrief(
     }
   }
 
-  // 2. Scene Strategy (V2 Core)
+  // 2. CRITIC FEEDBACK (V3 Priority)
+  if (criticDirectives && criticDirectives.length > 0) {
+    parts.push(`CRITIC IMPROVEMENTS REQUIRED: ${criticDirectives.join(', ')}. Priority: Fix these issues.`);
+  }
+
+  // 3. Scene Strategy (V2 Core)
   const scene = selectScene(identity.category, platform);
   parts.push(`SCENE STRATEGY: ${scene.mood}. The product is set in a ${scene.lighting} environment with a ${scene.composition} layout.`);
 
-  // 3. Commercial Composition (V2 Core)
+  // 4. Commercial Composition (V2 Core)
   const framing = getCommercialComposition(platform, input?.imageType || 'main');
   parts.push(`COMPOSITION: Subject scale is ${framing.subjectScale}. Position the ${identity.name} with ${framing.negativeSpace} negative space.`);
 
-  // 4. Identity Fingerprint
+  // 5. Identity Fingerprint
   parts.push(`STRICTLY PRESERVE the ${pio?.material || 'original'} material and ${pio?.textureProfile || 'form'} of the ${identity.name}. No alterations to logos or labels.`);
 
-  // 5. Visual Layer (No Jargon)
+  // 6. Visual Layer (No Jargon)
   parts.push(`${getRandomPhrase('mood', vso.mood)} ${getRandomPhrase('lighting', vso.lighting)} ${getRandomPhrase('realism')}`);
 
   return parts.join(' ');

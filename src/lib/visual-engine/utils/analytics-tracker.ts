@@ -15,7 +15,8 @@ export type MerchantEvent =
   | 'workflow_stalled'
   | 'retry_triggered'
   | 'retry_success'
-  | 'workflow_completed'; // Fixed: Added missing event
+  | 'workflow_completed'
+  | 'critic_regeneration';
 
 export function trackMerchantAction(event: MerchantEvent, metadata: Record<string, any> = {}) {
   const logEntry = {

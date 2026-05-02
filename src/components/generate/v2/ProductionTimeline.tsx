@@ -1,15 +1,20 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, RefreshCw, Download, ChevronRight, Loader2, LayoutGrid, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Circle, RefreshCw, Download, ChevronRight, Loader2, LayoutGrid, ShieldCheck, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface TimelineStep {
   id: string;
   type: string;
   label: string;
-  status: 'pending' | 'generating' | 'completed';
+  status: 'pending' | 'generating' | 'evaluating' | 'completed' | 'failed' | 'skipped';
   url?: string;
+  criticFeedback?: {
+    score: {
+      overall: number;
+    }
+  }
 }
 
 interface ProductionTimelineProps {
@@ -49,14 +54,14 @@ export const ProductionTimeline = ({ steps, activeStepId, onSelect, onRegenerate
             className={cn(
               "group relative p-4 rounded-2xl border-2 transition-all cursor-pointer",
               activeStepId === step.id ? "border-indigo-600 bg-indigo-50/10 shadow-sm" : "border-gray-50 hover:border-indigo-100 bg-white",
-              step.status === 'generating' && "border-indigo-400 animate-pulse"
+              (step.status === 'generating' || step.status === 'evaluating') && "border-indigo-400 animate-pulse"
             )}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 {step.status === 'completed' ? (
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
-                ) : step.status === 'generating' ? (
+                ) : (step.status === 'generating' || step.status === 'evaluating') ? (
                   <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
                 ) : (
                   <Circle className="w-4 h-4 text-gray-200" />
@@ -65,7 +70,14 @@ export const ProductionTimeline = ({ steps, activeStepId, onSelect, onRegenerate
                   {step.label}
                 </span>
               </div>
-              {step.status === 'completed' && <ChevronRight className="w-3 h-3 text-gray-300" />}
+              {step.status === 'completed' && (
+                <div className="flex items-center gap-1.5">
+                   <div className="text-[9px] font-bold text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded">
+                      {step.criticFeedback?.score.overall || 90}% Taste
+                   </div>
+                   <ChevronRight className="w-3 h-3 text-gray-300" />
+                </div>
+              )}
             </div>
 
             {step.url ? (
@@ -91,9 +103,15 @@ export const ProductionTimeline = ({ steps, activeStepId, onSelect, onRegenerate
               </div>
             ) : (
               <div className="aspect-square w-full rounded-xl bg-gray-50 border border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
-                <LayoutGrid className="w-6 h-6 mb-2 opacity-20" />
+                {step.status === 'evaluating' ? (
+                  <Eye className="w-6 h-6 mb-2 text-indigo-400 animate-pulse" />
+                ) : (
+                  <LayoutGrid className="w-6 h-6 mb-2 opacity-20" />
+                )}
                 <span className="text-[10px] font-medium text-center px-4">
-                  {step.status === 'generating' ? "Engine active..." : CONTEXT_MESSAGES[step.type] || "Awaiting Production"}
+                  {step.status === 'generating' ? "Engine active..." :
+                   step.status === 'evaluating' ? "Evaluating marketplace taste..." :
+                   CONTEXT_MESSAGES[step.type] || "Awaiting Production"}
                 </span>
               </div>
             )}

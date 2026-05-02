@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Sparkles, Activity, ShieldCheck, Zap } from "lucide-react";
+import { Loader2, Sparkles, Activity, ShieldCheck, Zap, Eye } from "lucide-react";
 import { MockGenAnimation } from "../MockGenAnimation";
 import { ProgressTracker, ProgressStep } from "../ProgressTracker";
 
@@ -14,6 +14,8 @@ interface CreativeWorkspaceProps {
 }
 
 export const CreativeWorkspace = ({ image, activeImage, isGenerating, steps, currentAction }: CreativeWorkspaceProps) => {
+  const isEvaluating = currentAction.toLowerCase().includes('evaluating') || currentAction.toLowerCase().includes('critic');
+
   return (
     <div className="flex-1 p-4 md:p-8 flex flex-col relative overflow-hidden">
       {/* Workflow Narration & Strategy Badges */}
@@ -36,6 +38,10 @@ export const CreativeWorkspace = ({ image, activeImage, isGenerating, steps, cur
            <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-gray-100 shadow-sm">
               <Zap className="w-3 h-3 text-indigo-500" />
               <span className="text-[10px] font-bold text-gray-600">Mobile Boost</span>
+           </div>
+           <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-gray-100 shadow-sm">
+              <Eye className="w-3 h-3 text-amber-500" />
+              <span className="text-[10px] font-bold text-gray-600">Taste Critic</span>
            </div>
         </div>
       </div>
@@ -73,9 +79,16 @@ export const CreativeWorkspace = ({ image, activeImage, isGenerating, steps, cur
                <motion.div
                  animate={{ scale: [1, 1.1, 1] }}
                  transition={{ repeat: Infinity, duration: 2 }}
-                 className="bg-white/90 p-4 md:p-6 rounded-full shadow-2xl"
+                 className="bg-white/90 p-4 md:p-6 rounded-full shadow-2xl flex flex-col items-center gap-4"
                >
-                 <Loader2 className="w-8 h-8 md:w-10 md:h-10 text-indigo-600 animate-spin" />
+                 {isEvaluating ? (
+                   <div className="flex flex-col items-center gap-3">
+                     <Eye className="w-10 h-10 text-amber-500 animate-pulse" />
+                     <span className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Reviewing Commercial Taste</span>
+                   </div>
+                 ) : (
+                   <Loader2 className="w-8 h-8 md:w-10 md:h-10 text-indigo-600 animate-spin" />
+                 )}
                </motion.div>
             </div>
           )}

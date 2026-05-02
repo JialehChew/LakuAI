@@ -10,7 +10,11 @@ import { analyzeInput, ReconstructionMode } from './layers/input-analyzer';
 /**
  * Orchestrates Multi-Pass Commercial Reconstruction (LakuAI V2).
  */
-export function generateVisualPrompt(input: EngineInput, useAIIsolationFallback: boolean = false): {
+export function generateVisualPrompt(
+  input: EngineInput,
+  useAIIsolationFallback: boolean = false,
+  criticDirectives?: string[]
+): {
   prompt: string;
   vso: VisualStrategyObject;
   identity: ProductIdentity;
@@ -37,8 +41,8 @@ export function generateVisualPrompt(input: EngineInput, useAIIsolationFallback:
   vso = applyCampaignRules(vso, input.campaign);
   vso = applyCompositionRules(vso, input.platform, input.imageType);
 
-  // V2: Ingest the isolation fallback flag directly into the brief builder
-  const prompt = buildAdvertisingBrief(vso, identity, input, analysis.reconstructionMode, useAIIsolationFallback);
+  // V2/V3: Ingest the isolation fallback flag and critic directives into the brief builder
+  const prompt = buildAdvertisingBrief(vso, identity, input, analysis.reconstructionMode, useAIIsolationFallback, criticDirectives);
 
   return { prompt, vso, identity, reconstructionMode: analysis.reconstructionMode };
 }

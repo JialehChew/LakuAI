@@ -9,7 +9,7 @@ import { WorkflowBlueprint } from "@/components/generate/v2/WorkflowBlueprint";
 import { ProgressStep } from "@/components/generate/ProgressTracker";
 import { useTranslation } from "@/lib/i18n/LanguageContext";
 import { trackMerchantAction } from "@/lib/visual-engine/utils/analytics-tracker";
-import { VisualWorkflowOrchestrator } from "@/lib/visual-engine/orchestrator";
+import { VisualWorkflowOrchestrator, GenerationStepResult } from "@/lib/visual-engine/orchestrator";
 import { saveAs } from "file-saver";
 import { Zap, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -80,22 +80,37 @@ export default function GeneratePage() {
 
     for (const pItem of runSteps) {
        const stepId = orchestrator.prepareStep(pItem);
-       setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'generating' } : s));
 
        try {
-         const url = await orchestrator.executeStep(stepId, async () => {
-           const res = await fetch("/api/generate", {
-             method: "POST",
-             headers: { "Content-Type": "application/json" },
-             body: JSON.stringify({ image, platform: selectedPlatform, imageType: pItem.type, product: productName }),
-           });
-           const data = await res.json();
-           if (!res.ok) throw new Error(data.error);
-           return data.image;
-         });
+         const url = await orchestrator.executeStep(
+           stepId,
+           async () => {
+             const res = await fetch("/api/generate", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ image, platform: selectedPlatform, imageType: pItem.type, product: productName }),
+             });
+             const data = await res.json();
+             if (!res.ok) throw new Error(data.error);
+             return data.image;
+           },
+           (status: GenerationStepResult) => {
+             setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? {
+               ...s,
+               status: status.status,
+               url: status.url,
+               criticFeedback: status.criticFeedback
+             } : s));
+
+             if (status.status === 'evaluating') {
+               setCurrentAction("Evaluating Marketplace Taste...");
+             } else if (status.status === 'generating') {
+               setCurrentAction(`Producing ${pItem.description}...`);
+             }
+           }
+         );
 
          if (url) {
-           setTimelineSteps(prev => prev.map(s => s.type === pItem.type ? { ...s, status: 'completed', url } : s));
            setActiveStepId(pItem.type);
          }
        } catch (err) {

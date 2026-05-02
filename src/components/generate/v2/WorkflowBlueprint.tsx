@@ -1,14 +1,14 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Eye, ShieldCheck, Zap } from "lucide-react";
 
 export const WorkflowBlueprint = () => {
   const outputs = [
-    "Mobile-optimized hero image",
-    "Product detail close-up",
-    "Lifestyle marketing scene",
-    "Trust-building composition",
-    "Promotional campaign poster"
+    { label: "Mobile-optimized hero image", icon: <Zap className="w-3 h-3" /> },
+    { label: "Product detail close-up", icon: <Check className="w-3 h-3" /> },
+    { label: "Lifestyle marketing scene", icon: <Check className="w-3 h-3" /> },
+    { label: "V3 Taste Evaluation", icon: <Eye className="w-3 h-3 text-amber-300" /> },
+    { label: "Identity Preservation", icon: <ShieldCheck className="w-3 h-3 text-green-300" /> }
   ];
 
   return (
@@ -17,10 +17,10 @@ export const WorkflowBlueprint = () => {
       <div className="space-y-3">
         {outputs.map((out, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className="w-4 h-4 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-              <Check className="w-2.5 h-2.5" />
+            <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+              {out.icon}
             </div>
-            <span className="text-xs font-bold text-indigo-50">{out}</span>
+            <span className="text-xs font-bold text-indigo-50">{out.label}</span>
           </div>
         ))}
       </div>
